@@ -25,6 +25,26 @@
 
 v1 不是讓 agent 直接私訊彼此，而是讓它們透過 moderator 共享同一份討論上下文。
 
+```mermaid
+flowchart LR
+  User["使用者"]
+  Config["hermes-agents.config.json"]
+  Runner["npm run session"]
+  Moderator["Moderator"]
+  AgentA["Hermes A"]
+  AgentB["Hermes B"]
+  Output["sessions/<sessionId>"]
+
+  User -->|"設定 topic / agents"| Config
+  Config --> Runner
+  Runner --> Moderator
+  Moderator -->|"context"| AgentA
+  AgentA -->|"response"| Moderator
+  Moderator -->|"updated context"| AgentB
+  AgentB -->|"response"| Moderator
+  Moderator -->|"messages / result"| Output
+```
+
 ## 2. 你可以用它做什麼？
 
 常見用途：
@@ -108,6 +128,20 @@ npm run session
 
 這會使用預設的 `hermes-agents.config.json`，讓 mock 版 `hermes-a` 和 `hermes-b` 先跑一場討論。
 
+```mermaid
+flowchart TD
+  Start["開始"]
+  WSL["進入 WSL"]
+  Project["cd ~/projects/aiMeeting"]
+  Path["啟用 Node PATH"]
+  Install["npm install"]
+  Test["npm test"]
+  Session["npm run session"]
+  Result["查看 sessions/<sessionId>/result.json"]
+
+  Start --> WSL --> Project --> Path --> Install --> Test --> Session --> Result
+```
+
 成功時會輸出類似：
 
 ```json
@@ -173,6 +207,21 @@ hermes-agents.config.json
 - `type`：agent adapter 類型，目前支援 `mock`、`command`、`http`。
 
 ## 5. 三種 agent 類型
+
+```mermaid
+flowchart TD
+  Need["我要接哪一種 Hermes？"]
+  Demo["只是先確認流程"]
+  Local["Hermes 是本機程式或 script"]
+  Remote["Hermes 有 HTTP endpoint"]
+  Mock["type: mock"]
+  Command["type: command"]
+  Http["type: http"]
+
+  Need --> Demo --> Mock
+  Need --> Local --> Command
+  Need --> Remote --> Http
+```
 
 ### 5.1 mock
 
@@ -279,6 +328,23 @@ docs/HERMES_AGENT_GUIDE.md
 - command/http adapter contract 是什麼。
 - 如何執行 `npm run session`。
 - 如何檢查 `sessions/<sessionId>/result.json`。
+
+```mermaid
+sequenceDiagram
+  participant User as 使用者
+  participant Hermes as Hermes agent
+  participant Guide as HERMES_AGENT_GUIDE.md
+  participant Config as hermes-agents.config.json
+  participant Runner as npm run session
+  participant Files as sessions/<sessionId>
+
+  User->>Hermes: 請閱讀 agent guide 並自行設定
+  Hermes->>Guide: 讀取設定與 adapter contract
+  Hermes->>Config: 設定自己的 id / type / endpoint
+  Hermes->>Runner: 執行測試與 session
+  Runner->>Files: 寫入 messages / result
+  Hermes->>User: 回報 session 結果
+```
 
 建議你對 Hermes agent 下這種任務：
 
@@ -547,4 +613,3 @@ docs/HERMES_AGENT_GUIDE.md
 ```text
 docs/OPERATIONS.md
 ```
-

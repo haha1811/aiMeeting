@@ -62,6 +62,28 @@ Detailed human operations guide:
 docs/OPERATIONS.md
 ```
 
+## System Overview
+
+```mermaid
+flowchart LR
+  Config["hermes-agents.config.json"]
+  CLI["CLI runner<br/>npm run session"]
+  Moderator["Moderator"]
+  A["Hermes A"]
+  B["Hermes B"]
+  Store["JsonlDiscussionStore"]
+  Files["sessions/<sessionId>"]
+
+  Config --> CLI
+  CLI --> Moderator
+  Moderator -->|"AgentDiscussionContext"| A
+  A -->|"AgentResponse"| Moderator
+  Moderator -->|"AgentDiscussionContext"| B
+  B -->|"AgentResponse"| Moderator
+  Moderator --> Store
+  Store --> Files
+```
+
 ## Required Runtime
 
 Use Node.js 20 or newer.
@@ -285,6 +307,26 @@ The runner creates the session, the moderator calls `hermes-a`, then `hermes-b`,
 
 Hermes agents do not call each other directly in v1. They communicate through the moderated session context.
 
+```mermaid
+sequenceDiagram
+  participant Runner as Runner
+  participant Mod as Moderator
+  participant A as Hermes A
+  participant B as Hermes B
+  participant Files as Session Files
+
+  Runner->>Mod: createSession(topic, agents)
+  Mod->>A: respond(context round 1)
+  A-->>Mod: content + optional taskAssignments
+  Mod->>Files: append message
+  Mod->>B: respond(updated context round 1)
+  B-->>Mod: content + optional taskAssignments
+  Mod->>Files: append message
+  Mod->>A: respond(updated context round 2)
+  A-->>Mod: content + assignments
+  Mod->>Files: write result.json
+```
+
 If `npm test` fails because `node` or `npm` is missing, activate the WSL user-local Node runtime:
 
 ```bash
@@ -312,6 +354,19 @@ The `respond(context)` method is the integration point between this discussion c
 ### AgentDiscussionContext
 
 The moderator passes context into each agent on every turn.
+
+```mermaid
+flowchart LR
+  Context["AgentDiscussionContext"]
+  Agent["HermesAgent.respond(context)"]
+  Response["AgentResponse"]
+  Content["content"]
+  Tasks["taskAssignments"]
+
+  Context --> Agent --> Response
+  Response --> Content
+  Response --> Tasks
+```
 
 Important fields:
 
