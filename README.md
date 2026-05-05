@@ -84,6 +84,10 @@ See [docs/OPERATIONS.md](docs/OPERATIONS.md) for WSL setup, usage scenarios, ser
 
 See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for a user-facing setup guide with simple from-zero usage scenarios.
 
+## AWS EC2 Test Plan
+
+See [docs/AWS_EC2_THREE_VM_TEST_PLAN.md](docs/AWS_EC2_THREE_VM_TEST_PLAN.md) for a three-VM runner / hermes-a / hermes-b deployment and validation walkthrough.
+
 ## Hermes Agent Guide
 
 See [docs/HERMES_AGENT_GUIDE.md](docs/HERMES_AGENT_GUIDE.md) for an agent-oriented runbook that explains how a Hermes agent can set up, verify, integrate, and use this repository by itself.
