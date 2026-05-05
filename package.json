@@ -1,0 +1,19 @@
+{
+  "name": "multi-hermes-discussion",
+  "version": "0.1.0",
+  "description": "Standalone TypeScript core for moderated multi-Hermes agent discussions.",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/test/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
