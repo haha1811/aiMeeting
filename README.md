@@ -69,3 +69,7 @@ Each session writes append-only discussion records under `sessions/<sessionId>/`
 ## Detailed Operations Guide
 
 See [docs/OPERATIONS.md](docs/OPERATIONS.md) for WSL setup, usage scenarios, service API details, persistence format, and Hermes runtime integration guidance.
+
+## Hermes Agent Guide
+
+See [docs/HERMES_AGENT_GUIDE.md](docs/HERMES_AGENT_GUIDE.md) for an agent-oriented runbook that explains how a Hermes agent can set up, verify, integrate, and use this repository by itself.
