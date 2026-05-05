@@ -1,0 +1,52 @@
+{
+  "topic": "Plan the first real Hermes-to-Hermes discussion",
+  "maxRounds": 3,
+  "rootDir": "sessions",
+  "agents": [
+    {
+      "id": "hermes-a",
+      "name": "Hermes A",
+      "role": "planner",
+      "type": "mock",
+      "responses": [
+        {
+          "content": "I will define the work and assign the implementation task to Hermes B.",
+          "taskAssignments": [
+            {
+              "assignedAgentId": "hermes-b",
+              "title": "Prepare the implementation approach",
+              "detail": "Review the discussion context and propose the concrete implementation path.",
+              "confidence": 0.9,
+              "rationale": "Hermes B is acting as the implementation partner."
+            }
+          ]
+        },
+        {
+          "content": "I agree with the implementation direction and will prepare the planning checklist.",
+          "taskAssignments": [
+            {
+              "assignedAgentId": "hermes-a",
+              "title": "Prepare planning checklist",
+              "detail": "Create the next-step checklist from the completed discussion.",
+              "confidence": 0.85
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hermes-b",
+      "name": "Hermes B",
+      "role": "builder",
+      "type": "mock",
+      "responses": [
+        {
+          "content": "I can prepare the implementation approach and identify the first executable step."
+        },
+        {
+          "content": "I have enough context to continue with implementation."
+        }
+      ]
+    }
+  ]
+}

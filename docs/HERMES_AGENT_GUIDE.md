@@ -1,4 +1,4 @@
-# Hermes Agent Self-Setup Guide
+﻿# Hermes Agent Self-Setup Guide
 
 This document is written for a Hermes agent or automation agent that needs to set up, verify, and use this repository without human hand-holding.
 
@@ -42,6 +42,18 @@ Primary test file:
 
 ```text
 test/discussion-service.test.ts
+```
+
+Runnable discussion config:
+
+```text
+hermes-agents.config.json
+```
+
+Config template:
+
+```text
+hermes-agents.config.example.json
 ```
 
 Detailed human operations guide:
@@ -111,13 +123,167 @@ Run the verification suite:
 npm test
 ```
 
+Run the default `hermes-a` / `hermes-b` mock discussion:
+
+```bash
+npm run session
+```
+
 Success criteria:
 
 ```text
-tests 6
-pass 6
+tests 9
+pass 9
 fail 0
 ```
+
+For `npm run session`, success means the command prints JSON with status `completed`, output file paths, and task assignments. The exact message and assignment counts may change after editing `hermes-agents.config.json`.
+
+## Agent Configuration
+
+Hermes agents configure themselves in:
+
+```text
+hermes-agents.config.json
+```
+
+Minimum shape:
+
+```json
+{
+  "topic": "Discussion topic",
+  "maxRounds": 3,
+  "rootDir": "sessions",
+  "agents": [
+    {
+      "id": "hermes-a",
+      "name": "Hermes A",
+      "role": "planner",
+      "type": "mock",
+      "responses": [{ "content": "I am ready." }]
+    },
+    {
+      "id": "hermes-b",
+      "name": "Hermes B",
+      "role": "builder",
+      "type": "mock",
+      "responses": [{ "content": "I am ready too." }]
+    }
+  ]
+}
+```
+
+Rules:
+
+- `agents` must contain at least two agents.
+- Each `id` must be unique.
+- `id` is the value used by task assignments.
+- Agent order controls moderator turn order.
+- `maxRounds` controls the maximum number of rounds.
+
+## Supported Agent Adapter Types
+
+### mock
+
+Use `mock` when verifying the system or creating a deterministic demo.
+
+```json
+{
+  "id": "hermes-a",
+  "name": "Hermes A",
+  "role": "planner",
+  "type": "mock",
+  "responses": [
+    {
+      "content": "I will assign work to Hermes B.",
+      "taskAssignments": [
+        {
+          "assignedAgentId": "hermes-b",
+          "title": "Prepare implementation approach",
+          "detail": "Propose the implementation path."
+        }
+      ]
+    }
+  ]
+}
+```
+
+### command
+
+Use `command` when a Hermes agent can be called as a local executable.
+
+The discussion runner sends `AgentDiscussionContext` as JSON to stdin. The command must print either JSON matching `AgentResponse` or plain text. Plain text is treated as `{ "content": "<stdout>" }`.
+
+```json
+{
+  "id": "hermes-a",
+  "name": "Hermes A",
+  "role": "planner",
+  "type": "command",
+  "command": "node",
+  "args": ["./agents/hermes-a.js"],
+  "timeoutMs": 60000
+}
+```
+
+Command agent contract:
+
+```text
+stdin:  AgentDiscussionContext JSON
+stdout: AgentResponse JSON or plain text
+exit:   0 on success
+```
+
+Example stdout:
+
+```json
+{
+  "content": "I recommend Hermes B implements the runner.",
+  "taskAssignments": [
+    {
+      "assignedAgentId": "hermes-b",
+      "title": "Implement runner",
+      "detail": "Create the script that starts the configured discussion."
+    }
+  ]
+}
+```
+
+### http
+
+Use `http` when a Hermes agent exposes an HTTP endpoint.
+
+The discussion runner sends `AgentDiscussionContext` as a JSON POST body. The endpoint must return either JSON matching `AgentResponse` or plain text.
+
+```json
+{
+  "id": "hermes-b",
+  "name": "Hermes B",
+  "role": "builder",
+  "type": "http",
+  "url": "http://localhost:4102/respond",
+  "headers": {
+    "authorization": "Bearer local-token"
+  },
+  "timeoutMs": 60000
+}
+```
+
+## How Hermes A And Hermes B Start Talking
+
+1. Each Hermes agent reads this guide.
+2. Each Hermes agent ensures it has an entry in `hermes-agents.config.json`.
+3. Each real agent chooses either `command` or `http` as its adapter.
+4. Each real agent verifies it can receive `AgentDiscussionContext` and return `AgentResponse`.
+5. One runner process executes:
+
+```bash
+npm run session
+```
+
+The runner creates the session, the moderator calls `hermes-a`, then `hermes-b`, and continues until `maxRounds` or the assignment completion condition is reached.
+
+Hermes agents do not call each other directly in v1. They communicate through the moderated session context.
 
 If `npm test` fails because `node` or `npm` is missing, activate the WSL user-local Node runtime:
 
@@ -381,7 +547,7 @@ git status --short
 Expected test result:
 
 ```text
-pass 6
+pass 9
 fail 0
 ```
 

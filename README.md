@@ -14,6 +14,16 @@ npm install
 npm test
 ```
 
+## Start a Discussion
+
+The repository includes a runnable mock setup for `hermes-a` and `hermes-b`.
+
+```bash
+npm run session
+```
+
+The command reads `hermes-agents.config.json`, starts a moderated discussion, and writes output under `sessions/<sessionId>/`.
+
 ## Example
 
 ```ts
