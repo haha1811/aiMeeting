@@ -1,109 +1,306 @@
-﻿# Multi-Hermes Agent Discussion ??隤芣?
+# Multi-Hermes Agent Discussion 操作說明
 
-?遢?辣隤芣?憒???WSL 銝剖?鋆葫閰艾銵?Multi-Hermes Agent Discussion Core嚗蒂隤芣?摰??雿輻????撘?
-## 1. ?摰?
+這份文件說明如何在 WSL 中安裝、測試、執行 Multi-Hermes Agent Discussion Core，並說明它適合的使用情境與整合方式。
 
-Multi-Hermes Agent Discussion Core ?臭???TypeScript/Node 璅∠?嚗靘??拙隞乩???Hermes agent ?典?銝??霅啣恕?ㄐ閮????蜓憿?
-?桀? v1 ?身閮?暺嚗?
-- 憭?Hermes agent ?典?銝??Node process 銝剖銵?- ??moderator ?批?潸?????- 閮??批捆隞?JSONL 瑼?靽???- 閮?蝯?敺?遙??瘣曄???- 靽??芯??寞??垢 agent?ebSocket?TTP API ??UI ??征??
-?芋蝯??航?憭?UI嚗?銝摰??agent runtime??瘥??憭?agent ???敹?隤踹惜??
-## 2. 雿輻??
+## 1. 功能定位
 
-### 2.1 憭?agent ?勗?閬?隞餃?
+Multi-Hermes Agent Discussion Core 是一個 TypeScript/Node 模組，用來讓兩台以上的 Hermes agent 在同一個「會議室」裡討論同一個主題。
 
-?嗡??????脩? Hermes agent嚗?憒?
+目前 v1 的設計重點是：
 
-- Planner嚗?閫??瘙?閬?甇仿???- Builder嚗?隡啣祕雿撘?- Reviewer嚗炎?仿◢?芾?皜祈岫蝑??
-?臭誑霈???撠?銝??topic ?脰?憭憚閮?嚗?敺閮?蝯??Ｙ?隞餃??晷??
-?拙??冽嚗?
-- ?啣??賡??澆???銵?隢?- 憭批??瘙?閫??- 霈????瑞? agent 鈭鋆???
-### 2.2 ?芸???霅啁???
-瘥活閮??賣?撖怠嚗?
-- `messages.jsonl`嚗?銝??agent ?潸???- `events.jsonl`嚗ession 撱箇???憪??仃??鈭辣??- `session.json`嚗??session ???- `result.json`嚗?蝯遙??瘣曄???
-??雿隞亙鈭?瑼Ｘ agent ?箔?暻澆??箸??遙??瘣整?
-### 2.3 憭??脫捱蝑???
-雿隞亥?瘥?Hermes agent ?格?銝?閫暺?靘?嚗?
-- Product agent嚗?瘜其蝙?刻?潦?- Engineering agent嚗?瘜冽瑽?蝬剛風???- QA agent嚗?瘜冽葫閰西?憭望?????- Ops agent嚗?瘜券蝵脰?????
-Moderator ???箏???霈?agent ?潸?嚗??梯?憭拚????仃?扼?
-### 2.4 隞餃??晷?Ｙ???
-閮???銝哨?agent ?臭誑?典?閬葉?葆 `taskAssignments`?瘥?agent ?質撠?銝?遙??嚗oderator ???拍???隢?
-憒?閮??唳?憭批??隞? agent 瘝?鋡急?瘣曆遙??moderator ??銝?閮?follow-up 隞餃?嚗???撩瞍?
-## 3. ?桀?撠?雿蔭
+- 多個 Hermes agent 在同一個 Node process 中執行。
+- 由 moderator 控制發言順序。
+- 討論內容以 JSONL 檔案保存。
+- 討論結束後產生任務分派結果。
+- 支援 mock、command、http 三種 agent adapter。
+- 保留未來擴充成遠端 agent、WebSocket、HTTP API 或 UI 的空間。
 
-Windows ??撌乩??桅?嚗?
+這個模組不是聊天 UI，也不是完整的 agent runtime。它比較像是多 agent 協作的核心協調層。
+
+## 2. 使用情境
+
+### 2.1 多 agent 共同規劃任務
+
+當你有不同角色的 Hermes agent，例如 Planner、Builder、Reviewer，可以讓它們針對同一個 topic 進行多輪討論，最後由討論結果產生任務分派。
+
+適合用於：
+
+- 新功能開發前的技術討論。
+- 大型需求拆解。
+- 讓不同專長的 agent 互相補充。
+
+### 2.2 自動化會議紀錄
+
+每次討論都會寫入：
+
+- `messages.jsonl`：每一則 agent 發言。
+- `events.jsonl`：session 建立、開始、完成、失敗等事件。
+- `session.json`：目前 session 狀態。
+- `result.json`：最終任務分派結果。
+
+這讓你可以在事後檢查 agent 為什麼做出某個任務分派。
+
+### 2.3 多角色決策輔助
+
+你可以讓每個 Hermes agent 扮演不同觀點，例如 Product、Engineering、QA、Ops。Moderator 會依固定順序讓 agent 發言，避免自由聊天造成重複或失控。
+
+### 2.4 任務分派產生器
+
+討論過程中，agent 可以在回覆中附帶 `taskAssignments`。當每個 agent 都至少有一個任務時，moderator 會提早結束討論。
+
+如果討論到最大回合數仍有 agent 沒有被指派任務，moderator 會補上預設 follow-up 任務，避免結果缺漏。
+
+## 3. 目前專案位置
+
+Windows 原始工作目錄：
+
 ```text
-G:\?嗡??餉\PTC_Lenovo X13\tmp\VibeCoding\aiMeeting
+G:\其他電腦\PTC_Lenovo X13\tmp\VibeCoding\aiMeeting
 ```
 
-WSL ?批?瑁?撌乩??桅?嚗?
+WSL 內可執行工作目錄：
+
 ```bash
 /home/haha/projects/aiMeeting
 ```
 
-?望 Windows ??`G:\?嗡??餉\...` 頝臬??⊥?鋡?WSL 甇?虜頧?嚗遣霅唳撣詨銵?皜祈岫?賢 WSL ??Linux home ?桅?銝剝脰???
-## 4. WSL ?啣?
+由於 Windows 的 `G:\其他電腦\...` 路徑無法被 WSL 正常轉換，建議日常執行與測試都在 WSL 的 Linux home 目錄中進行。
 
-?桀?撌脩Ⅱ隤?
+## 4. WSL 環境
 
-- WSL distro嚗buntu
-- WSL version嚗?
-- WSL 雿輻??`haha`
-- Node 摰?雿蔭嚗/home/haha/.local/node/node-v22.22.2-linux-x64`
-- Node ?嚗v22.22.2`
-- npm ?嚗10.9.7`
+目前已確認：
 
-Node ?臬?鋆雿輻???嚗??蝙??`sudo apt install`????桀? WSL ??`sudo` ?閬?蝣潘??箔??踹??∩?嚗??user-local Node??
-## 5. ?瑁?皜祈岫
+- WSL distro：Ubuntu
+- WSL version：2
+- WSL 使用者：`haha`
+- Node 安裝位置：`/home/haha/.local/node/node-v22.22.2-linux-x64`
+- Node 版本：`v22.22.2`
+- npm 版本：`10.9.7`
 
-?脣 WSL嚗?
+Node 是安裝在使用者目錄下，沒有使用 `sudo apt install`。原因是目前 WSL 的 `sudo` 需要密碼，為了避免卡住，改用 user-local Node。
+
+## 5. 安裝與測試
+
+進入 WSL：
+
 ```powershell
 wsl
 ```
 
-???啣?獢?
+切換到專案：
 
 ```bash
 cd ~/projects/aiMeeting
 ```
 
-??user-local Node ??祆活 shell ??PATH嚗?
+把 user-local Node 加入本次 shell 的 PATH：
+
 ```bash
 export PATH=/home/haha/.local/node/node-v22.22.2-linux-x64/bin:$PATH
 ```
 
-?瑁?皜祈岫嚗?
+安裝依賴：
+
+```bash
+npm install
+```
+
+執行測試：
+
 ```bash
 npm test
 ```
 
-?瑁??身??`hermes-a` / `hermes-b` mock 閮?嚗?
-```bash
-npm run session
-```
+目前測試應通過：
 
-??隞斗?霈??`hermes-agents.config.json`嚗遣蝡???moderated discussion嚗蒂?撓?箏神??`sessions/<sessionId>/`??
-?桀?皜祈岫撌脤?嚗?
 ```text
 tests 9
 pass 9
 fail 0
 ```
 
-## 6. 摰?靘陷
+## 6. 啟動 Hermes 討論
 
-憒? WSL 撠?鞈?憭暹?啗?鋆賜?嚗??瑁?嚗?
+預設已提供 `hermes-a` / `hermes-b` 的 mock 設定。
+
+執行：
+
 ```bash
-cd ~/projects/aiMeeting
-export PATH=/home/haha/.local/node/node-v22.22.2-linux-x64/bin:$PATH
-npm install
+npm run session
 ```
 
-靘陷?撌脣摰 `package-lock.json`??
-## 7. ?詨?璁艙
+這個指令會：
 
-### 7.1 HermesAgent
+- 讀取 `hermes-agents.config.json`
+- 建立一場 moderated discussion
+- 依序呼叫 `hermes-a`、`hermes-b`
+- 將每次發言寫入 `messages.jsonl`
+- 將最終任務分派寫入 `result.json`
 
-瘥???Hermes agent ?質?蝚血? `HermesAgent` 隞嚗?
+成功時會輸出類似：
+
+```json
+{
+  "status": "completed",
+  "messageCount": 3,
+  "roundsCompleted": 2,
+  "taskAssignmentCount": 2,
+  "files": {
+    "messages": "sessions/<sessionId>/messages.jsonl",
+    "events": "sessions/<sessionId>/events.jsonl",
+    "session": "sessions/<sessionId>/session.json",
+    "result": "sessions/<sessionId>/result.json"
+  }
+}
+```
+
+你也可以覆蓋 topic：
+
+```bash
+npm run session -- --topic "討論下一步 Hermes 整合"
+```
+
+或指定不同 config：
+
+```bash
+npm run session -- --config hermes-agents.config.example.json
+```
+
+## 7. Agent 設定檔
+
+主要設定檔：
+
+```text
+hermes-agents.config.json
+```
+
+範本：
+
+```text
+hermes-agents.config.example.json
+```
+
+基本格式：
+
+```json
+{
+  "topic": "Discussion topic",
+  "maxRounds": 3,
+  "rootDir": "sessions",
+  "agents": [
+    {
+      "id": "hermes-a",
+      "name": "Hermes A",
+      "role": "planner",
+      "type": "mock",
+      "responses": [{ "content": "I am ready." }]
+    },
+    {
+      "id": "hermes-b",
+      "name": "Hermes B",
+      "role": "builder",
+      "type": "mock",
+      "responses": [{ "content": "I am ready too." }]
+    }
+  ]
+}
+```
+
+規則：
+
+- `agents` 至少要有 2 個。
+- 每個 `id` 必須唯一。
+- `id` 會被 `taskAssignments.assignedAgentId` 使用。
+- agent 陣列順序就是 moderator 發言順序。
+- `maxRounds` 控制最大討論回合數。
+
+## 8. Adapter 類型
+
+### 8.1 mock
+
+`mock` 用於測試或 demo，不需要真實 Hermes runtime。
+
+```json
+{
+  "id": "hermes-a",
+  "name": "Hermes A",
+  "role": "planner",
+  "type": "mock",
+  "responses": [
+    {
+      "content": "I will assign work to Hermes B.",
+      "taskAssignments": [
+        {
+          "assignedAgentId": "hermes-b",
+          "title": "Prepare implementation approach",
+          "detail": "Propose the implementation path."
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 8.2 command
+
+`command` 用於本機可執行的 Hermes agent。
+
+Runner 會把 `AgentDiscussionContext` JSON 傳到 stdin。Command 必須輸出 `AgentResponse` JSON，或輸出純文字。純文字會被當成：
+
+```json
+{ "content": "<stdout>" }
+```
+
+設定範例：
+
+```json
+{
+  "id": "hermes-a",
+  "name": "Hermes A",
+  "role": "planner",
+  "type": "command",
+  "command": "node",
+  "args": ["./agents/hermes-a.js"],
+  "timeoutMs": 60000
+}
+```
+
+Command contract：
+
+```text
+stdin:  AgentDiscussionContext JSON
+stdout: AgentResponse JSON or plain text
+exit:   0 on success
+```
+
+### 8.3 http
+
+`http` 用於有 HTTP endpoint 的 Hermes agent。
+
+Runner 會以 POST JSON 的方式把 `AgentDiscussionContext` 傳到 endpoint。Endpoint 必須回傳 `AgentResponse` JSON，或回傳純文字。
+
+設定範例：
+
+```json
+{
+  "id": "hermes-b",
+  "name": "Hermes B",
+  "role": "builder",
+  "type": "http",
+  "url": "http://localhost:4102/respond",
+  "headers": {
+    "authorization": "Bearer local-token"
+  },
+  "timeoutMs": 60000
+}
+```
+
+## 9. 核心概念
+
+### 9.1 HermesAgent
+
+每一台 Hermes agent 都要符合 `HermesAgent` 介面：
+
 ```ts
 export interface HermesAgent {
   id: string;
@@ -113,10 +310,11 @@ export interface HermesAgent {
 }
 ```
 
-???? `respond(context)`?oderator 瘥活頛芸閰?agent ?潸??????桀? session context ?喳??
-### 7.2 DiscussionSession
+最重要的是 `respond(context)`。Moderator 每次輪到該 agent 發言時，會把目前 session context 傳入。
 
-Session 隞?”銝?游? agent 閮?嚗??恬?
+### 9.2 DiscussionSession
+
+Session 代表一場多 agent 討論，包含：
 
 - `sessionId`
 - `topic`
@@ -126,22 +324,31 @@ Session 隞?”銝?游? agent 閮?嚗??恬?
 - `maxRounds`
 - `taskAssignments`
 
-### 7.3 Moderator
+### 9.3 Moderator
 
-Moderator 鞎痊嚗?
-- 撽??喳?閬? 2 ??agent??- 撠?session ????`running`??- 靘?agents ??????潸???- 瘥憚?喳???messages ??taskAssignments??- ?券??啣?甇Ｘ?隞嗆?摰? session??
-?迫璇辣?蝔殷?
+Moderator 負責：
 
-- 撌脤? `maxRounds`??- 瘥?agent ?質撠?銝??task assignment??
-### 7.4 JSONL Persistence
+- 驗證至少要有 2 個 agent。
+- 將 session 狀態改成 `running`。
+- 依 agents 陣列順序發言。
+- 每輪傳入最新 messages 與 taskAssignments。
+- 在達到停止條件時完成 session。
 
-瘥 session ?賣?撱箇?鞈?憭橘?
+停止條件有兩種：
+
+- 已達 `maxRounds`。
+- 每個 agent 都至少有一個 task assignment。
+
+### 9.4 JSONL Persistence
+
+每場 session 都會建立資料夾：
 
 ```text
 sessions/<sessionId>/
 ```
 
-?批捆?嚗?
+內容包含：
+
 ```text
 messages.jsonl
 events.jsonl
@@ -149,215 +356,159 @@ session.json
 result.json
 ```
 
-`messages.jsonl` ??`events.jsonl` ??append-only ?澆?嚗??胯??剛?銝脫敺???撌亙??
-## 8. ?箸雿輻蝭?
+`messages.jsonl` 與 `events.jsonl` 是 append-only 格式，適合除錯、重播與串接後續分析工具。
 
-隞乩?蝭?撱箇??拙?fake Hermes agents嚗?摰脰?銝?渲?隢?
+## 10. Service API
+
+### 10.1 createSession
+
+建立一場討論：
 
 ```ts
-import { DiscussionService, type HermesAgent } from "./src/index.js";
-
-const planner: HermesAgent = {
-  id: "planner",
-  name: "Planner",
-  role: "planning",
-  async respond(context) {
-    return {
-      content: `I will plan the work for: ${context.topic}`,
-      taskAssignments: [
-        {
-          assignedAgentId: "builder",
-          title: "Implement core module",
-          detail: "Build the service, moderator, and file persistence.",
-          confidence: 0.9,
-          rationale: "Builder is responsible for implementation."
-        }
-      ]
-    };
-  }
-};
-
-const builder: HermesAgent = {
-  id: "builder",
-  name: "Builder",
-  role: "implementation",
-  async respond() {
-    return {
-      content: "I can implement the assigned task."
-    };
-  }
-};
-
-const service = new DiscussionService({ rootDir: "sessions" });
-
 const session = await service.createSession({
-  topic: "Ship multi-agent discussion v1",
-  agents: [planner, builder],
-  maxRounds: 3
-});
-
-const result = await service.runSession(session.sessionId);
-
-console.log(result.taskAssignments);
-```
-
-## 9. Service API
-
-### 9.1 createSession
-
-撱箇?銝?渲?隢?
-```ts
-const session = await service.createSession({
-  topic: "閮?銝駁?",
+  topic: "討論主題",
   agents: [agentA, agentB],
   maxRounds: 3
 });
 ```
 
-瘜冽?嚗?
-- `agents` ?喳?閬? 2 ??- `maxRounds` ?身??3??- agent ???蔣??moderator ?潸?????
-### 9.2 runSession
+### 10.2 runSession
 
-?瑁?閮???
+執行討論：
+
 ```ts
 const result = await service.runSession(session.sessionId);
 ```
 
-? `DiscussionResult`嚗銝剖??急?蝯遙??瘣整?
-### 9.3 appendMessage
+### 10.3 appendMessage
 
-??餈賢?閮?隞亦?冽靘???human message?ystem note ????agent message ??
+手動追加訊息：
+
 ```ts
 await service.appendMessage(session.sessionId, {
   senderId: "human",
   senderName: "Human",
-  content: "隢??血 v1 ?撠銵??賬?
+  content: "請聚焦在 v1 最小可行功能。"
 });
 ```
 
-### 9.4 getSession
+### 10.4 getSession
 
-霈??session ??? messages??
+讀取 session 狀態與 messages：
+
 ```ts
 const session = await service.getSession(sessionId);
 ```
 
-### 9.5 getResult
+### 10.5 getResult
 
-霈??`result.json`??
+讀取 `result.json`：
+
 ```ts
 const result = await service.getResult(sessionId);
 ```
 
-## 10. ?亙?祕 Hermes Agent
-
-?桀? fake agent ?舐?亙??喳摰摰嫘??亙?祕 Hermes agent嚗?閬? Hermes ??怠???`respond(context)`??
-璁艙憒?嚗?
-```ts
-const hermesAgent: HermesAgent = {
-  id: "hermes-a",
-  name: "Hermes A",
-  role: "planner",
-  async respond(context) {
-    const prompt = [
-      `Topic: ${context.topic}`,
-      `Round: ${context.round}`,
-      "Messages:",
-      ...context.messages.map((message) => `${message.senderName}: ${message.content}`)
-    ].join("\n");
-
-    const hermesOutput = await callHermesRuntime(prompt);
-
-    return {
-      content: hermesOutput.text,
-      taskAssignments: hermesOutput.taskAssignments
-    };
-  }
-};
-```
-
-撱箄降?祕?游???霈?Hermes ?蝯?????靘?嚗?
-```ts
-{
-  "content": "?遣霅啣?摰? moderator loop??,
-  "taskAssignments": [
-    {
-      "assignedAgentId": "builder",
-      "title": "Implement moderator loop",
-      "detail": "Add deterministic turn control and maxRounds stop condition.",
-      "confidence": 0.87,
-      "rationale": "?憭?agent 閮???詨???蝔?
-    }
-  ]
-}
-```
-
-## 11. 瑼?蝯?
+## 11. 檔案結構
 
 ```text
 src/
+  adapters.ts
+  cli.ts
+  config.ts
   index.ts
   moderator.ts
   service.ts
   storage.ts
   types.ts
 test/
+  config-adapters.test.ts
   discussion-service.test.ts
 docs/
+  HERMES_AGENT_GUIDE.md
   OPERATIONS.md
+hermes-agents.config.json
+hermes-agents.config.example.json
 package.json
 package-lock.json
 tsconfig.json
 README.md
 ```
 
-銝餉?瑼?隤芣?嚗?
-- `src/types.ts`嚗?????乓?- `src/service.ts`嚗??其蜓閬蝙?典???- `src/moderator.ts`嚗?嗅? agent 閮?瘚???- `src/storage.ts`嚗SONL ??JSON 瑼?靽???- `test/discussion-service.test.ts`嚗???游?皜祈岫??
-## 12. 撣貉???
+主要檔案說明：
 
-### 12.1 ?箔?暻潔?閬?亙 Windows ?桅?頝?
+- `src/types.ts`：所有公開型別。
+- `src/service.ts`：外部主要使用入口。
+- `src/moderator.ts`：控制多 agent 討論流程。
+- `src/storage.ts`：JSONL 與 JSON 檔案保存。
+- `src/adapters.ts`：mock、command、http adapter。
+- `src/cli.ts`：`npm run session` 的執行入口。
+- `src/config.ts`：讀取與驗證 agent 設定檔。
 
-?桀? Windows 頝臬??嚗?
+## 12. 常見問題
+
+### 12.1 為什麼不要直接在 Windows 目錄跑？
+
+目前 Windows 路徑包含：
+
 ```text
-G:\?嗡??餉\PTC_Lenovo X13\...
+G:\其他電腦\PTC_Lenovo X13\...
 ```
 
-WSL ?⊥?蝛拙?頧??楝敺??隞亙遣霅啣嚗?
+WSL 無法穩定轉換這個路徑，所以建議在：
+
 ```bash
 ~/projects/aiMeeting
 ```
 
-?瑁???
-### 12.2 ?箔?暻潭?甈⊿閬?export PATH嚗?
-? Node ?臬?鋆 user-local ?桅?嚗??舐頂蝯?PATH??
-雿隞交???? `~/.bashrc`嚗?
+執行。
+
+### 12.2 為什麼每次都要 export PATH？
+
+因為 Node 是安裝在 user-local 目錄，而不是系統 PATH。
+
+你可以把這行加入 `~/.bashrc`：
+
 ```bash
 export PATH=/home/haha/.local/node/node-v22.22.2-linux-x64/bin:$PATH
 ```
 
-銋????WSL shell 撠曹??券???
-### 12.3 憒? npm test ?曆??唳葫閰行獐颲佗?
+之後開新的 WSL shell 就不用重打。
 
-蝣箄? `package.json` 鋆∠? test script ?荔?
+### 12.3 如果 npm test 找不到測試怎麼辦？
+
+確認 `package.json` 裡的 test script 是：
 
 ```json
 "test": "npm run build && node --test dist/test/*.test.js"
 ```
 
-???啣銵?
+再重新執行：
 
 ```bash
 npm test
 ```
 
-### 12.4 閮?蝯??典鋆∴?
+### 12.4 討論結果在哪裡？
 
-?身?典銵????
+預設在執行目錄下的：
 
 ```text
 sessions/<sessionId>/result.json
 ```
 
-憒?雿遣蝡?service ??摰???`rootDir`嚗???撖怠閰脩??
-## 13. 撱箄降銝?甇?
-撱箄降銝??挾????`examples/run-session.ts`嚗 2 ??3 ??fake agent ?Ｙ?撖阡? `sessions/` 頛詨??瘚?蝛拙?敺??? fake agent ???祕 Hermes runtime adapter??
+如果你建立 service 時指定不同 `rootDir`，結果會寫到該目錄。
+
+## 13. 建議下一步
+
+下一階段可以把 `hermes-agents.config.json` 裡的 mock agent 換成真實 Hermes runtime：
+
+- 如果 Hermes 是本機 executable，使用 `type: "command"`。
+- 如果 Hermes 是 HTTP service，使用 `type: "http"`。
+
+換好後執行：
+
+```bash
+npm run session
+```
+
+目標是讓 `hermes-a` 和 `hermes-b` 不需要直接互相呼叫，而是透過 moderator 傳遞 context，開始可追蹤、可保存、可驗證的討論。
