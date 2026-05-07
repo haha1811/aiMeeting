@@ -1,0 +1,35 @@
+# Changelog
+
+## v0.2.0 - Phase 3A Web Runner Console
+
+Released: 2026-05-07
+
+### Added
+
+- Added runner-hosted Web console with `npm run web`.
+- Added Web form for topic, max rounds, planner endpoint, builder endpoint, and execution toggle.
+- Added replay view for session summary, planner / builder messages, task assignments, actions, execution results, and workspace files.
+- Added Web API validation, safe session id guard, replay reader, API handlers, and static HTTP server.
+- Added Phase 3A Web runner console runbook.
+
+### Verified
+
+- `npm test`: 25 passing tests.
+- Local Web smoke: `/api/default-config`, `/api/sessions`, and `/` static route verified.
+
+## v0.1.0 - Multi-Hermes Discussion and Execution MVP
+
+Released: 2026-05-07
+
+### Added
+
+- Added moderated multi-Hermes discussion core.
+- Added append-only JSONL persistence for messages, events, actions, and execution results.
+- Added task assignment result output.
+- Added Phase 2 execution workspace and executor.
+- Added real Hermes HTTP wrapper and three-EC2 validation runbooks.
+
+### Verified
+
+- Real Hermes execution MVP completed on three EC2 instances.
+- Successful validation session produced `executionResultCount: 10`.

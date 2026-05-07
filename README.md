@@ -2,6 +2,11 @@
 
 A small TypeScript/Node core for running two or more in-process Hermes agents in a moderated meeting-room discussion.
 
+## Versions
+
+- `v0.1.0`: CLI discussion runner, JSONL persistence, and real Hermes execution MVP.
+- `v0.2.0`: Web Runner Console replay MVP.
+
 ## Install
 
 ```bash
