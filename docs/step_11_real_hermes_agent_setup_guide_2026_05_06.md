@@ -39,8 +39,10 @@ Hermes B EC2（builder / GPT-5.3-Codex）
 ```bash
 which hermes
 hermes --version
-hermes chat "請用繁體中文簡短回答：你現在可以正常回覆嗎？"
+hermes -z "請用繁體中文簡短回答：你現在可以正常回覆嗎？" chat
 ```
+
+注意：Hermes Agent v0.12.0 的 prompt 參數是全域參數，格式是 `hermes -z "..." chat`。如果執行 `hermes chat "..."`，會出現 `unrecognized arguments`。
 
 確認：
 
@@ -746,4 +748,3 @@ AWS EC2
 ```text
 AI Team Orchestration Prototype
 ```
-

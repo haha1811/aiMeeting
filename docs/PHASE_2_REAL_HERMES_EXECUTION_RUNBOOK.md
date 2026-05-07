@@ -134,7 +134,7 @@ EC2 若用 apt/nvm 安裝 Node，依實際路徑調整。
 ```bash
 which hermes
 hermes --version
-hermes chat "請用繁體中文簡短回答：Hermes A 可以正常回覆嗎？"
+hermes -z "請用繁體中文簡短回答：Hermes A 可以正常回覆嗎？" chat
 ```
 
 預期：
@@ -142,6 +142,8 @@ hermes chat "請用繁體中文簡短回答：Hermes A 可以正常回覆嗎？"
 - 找得到 `hermes`
 - version 正常
 - 可以得到中文回覆
+
+注意：Hermes Agent v0.12.0 的 prompt 參數是全域參數，格式是 `hermes -z "..." chat`。如果執行 `hermes chat "..."`，會出現 `unrecognized arguments`。
 
 ### 4.2 確認 real wrapper 存在
 
@@ -217,7 +219,7 @@ curl -s http://localhost:4101/respond \
 ```bash
 which hermes
 hermes --version
-hermes chat "請用繁體中文簡短回答：Hermes B 可以正常回覆嗎？"
+hermes -z "請用繁體中文簡短回答：Hermes B 可以正常回覆嗎？" chat
 ```
 
 ### 5.2 確認 real wrapper
@@ -544,4 +546,3 @@ notes:
 ```text
 docs/step_12_phase_2_real_hermes_execution_validation_YYYY_MM_DD.md
 ```
-
