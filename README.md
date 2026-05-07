@@ -92,6 +92,10 @@ See [docs/AWS_EC2_THREE_VM_TEST_PLAN.md](docs/AWS_EC2_THREE_VM_TEST_PLAN.md) for
 
 See [docs/step_11_real_hermes_agent_setup_guide_2026_05_06.md](docs/step_11_real_hermes_agent_setup_guide_2026_05_06.md) for the real AWS EC2 + Hermes CLI validation notes.
 
+## Phase 2 Execution Design
+
+See [docs/PHASE_2_EXECUTION_DESIGN.md](docs/PHASE_2_EXECUTION_DESIGN.md) for the proposed autonomous execution design, action schema, workspace model, and MVP implementation order.
+
 ## Hermes Agent Guide
 
 See [docs/HERMES_AGENT_GUIDE.md](docs/HERMES_AGENT_GUIDE.md) for an agent-oriented runbook that explains how a Hermes agent can set up, verify, integrate, and use this repository by itself.
