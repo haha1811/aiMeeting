@@ -598,6 +598,64 @@ Endpoint 應回傳 JSON：
 
 當 mock HTTP endpoint 測通後，把 hermes-a / hermes-b 的 `agents/hermes-http-mock.js` 換成真實 Hermes service。
 
+repo 已提供一個可直接使用的真實 Hermes CLI wrapper：
+
+```text
+agents/hermes-http-real.js
+```
+
+它會：
+
+- 接收 runner 傳來的 `AgentDiscussionContext`
+- 轉成繁體中文 prompt
+- 使用 temp file 保存長 prompt
+- 執行 `hermes -z "$(cat prompt.txt)" chat`
+- 將 Hermes 輸出包成 `AgentResponse`
+
+實測時曾嘗試直接執行：
+
+```js
+execFile("hermes", ["-z", prompt, "chat"])
+```
+
+但多輪討論後 prompt 變長，容易遇到 CLI argument / shell escaping 問題。
+
+也曾嘗試：
+
+```text
+spawn("hermes", ["chat"]) + stdin
+```
+
+但 Hermes CLI 不支援從 stdin 讀取 prompt，會發生 `EPIPE`。
+
+目前穩定方案是：
+
+```text
+temp file + hermes -z "$(cat prompt.txt)" chat
+```
+
+建議真實 Hermes 測試使用：
+
+```bash
+PORT=4101 \
+AGENT_ID=hermes-a \
+AGENT_NAME="Hermes A" \
+AGENT_ROLE="planner" \
+HERMES_TIMEOUT_MS=300000 \
+node agents/hermes-http-real.js
+```
+
+Hermes B：
+
+```bash
+PORT=4102 \
+AGENT_ID=hermes-b \
+AGENT_NAME="Hermes B" \
+AGENT_ROLE="builder" \
+HERMES_TIMEOUT_MS=300000 \
+node agents/hermes-http-real.js
+```
+
 只要真實 service 遵守：
 
 ```text
@@ -608,3 +666,62 @@ response body: AgentResponse JSON or plain text
 
 runner 的 `hermes-agents.aws.config.json` 就不需要大改，只要更新 endpoint URL 或 headers。
 
+## 12. 已完成的真實 Hermes 驗證
+
+2026-05-06 已完成一次真實驗證：
+
+```text
+runner EC2
+→ hermes-a EC2（planner / Hermes CLI / GPT-5.5）
+→ hermes-b EC2（builder / Hermes CLI / GPT-5.3-Codex）
+```
+
+測試主題：
+
+```text
+產品介紹網站 MVP 實作方案
+```
+
+成功 session：
+
+```text
+c38b323f-d93b-4bab-98d1-d610776c0fe0
+```
+
+結果：
+
+```json
+{
+  "status": "completed",
+  "messageCount": 6,
+  "roundsCompleted": 3,
+  "taskAssignmentCount": 2
+}
+```
+
+已驗證能力：
+
+- AWS EC2 分散式架構
+- runner orchestration
+- HTTP agent communication
+- 真實 Hermes CLI wrapper
+- planner / builder role separation
+- 多輪 context propagation
+- 真實 AI 對 AI 討論
+- session persistence
+- events logging
+- long prompt handling
+
+目前系統定位：
+
+```text
+Phase 1: AI Team Discussion System
+```
+
+尚未進入：
+
+```text
+Phase 2: AI Autonomous Execution System
+```
+
+也就是目前 agent 已能討論、規劃、協作，但尚未自動建立專案、修改檔案、commit、build 或 deploy。
