@@ -430,7 +430,39 @@ Phase 2 v1 完成時，應能：
 - mock agent 可產生一個簡單 Web MVP 檔案。
 - `npm test` 通過。
 
-## 14. Open Questions
+## 14. Phase 2 Smoke Test
+
+目前 repo 提供一個 mock execution smoke test：
+
+```bash
+npm run session:execute
+```
+
+此指令會讀取：
+
+```text
+hermes-agents.execution.config.json
+```
+
+並啟用：
+
+```json
+{
+  "enableExecution": true,
+  "workspaceRootDir": "workspaces"
+}
+```
+
+預期行為：
+
+- 建立 `workspaces/<sessionId>/repo/`
+- Hermes A 透過 action 建立 `docs/web-mvp.md`
+- Hermes B 透過 action 執行 `ls docs`
+- runner 產生 `actions.jsonl`
+- runner 產生 `execution-results.jsonl`
+- result JSON 顯示 `executionResultCount`
+
+## 15. Open Questions
 
 後續實作前需要決定：
 
@@ -441,7 +473,7 @@ Phase 2 v1 完成時，應能：
 - git commit 是否由 executor 自動做，還是只產生 diff？
 - 真實 Hermes 要回 JSON actions，還是由 wrapper 將自然語言轉 actions？
 
-## 15. 建議預設決策
+## 16. 建議預設決策
 
 為了先做出可驗證 MVP，建議：
 
@@ -451,4 +483,3 @@ Phase 2 v1 完成時，應能：
 - 所有 agent 權限相同。
 - v1 只做到 git diff，不自動 push。
 - 真實 Hermes 必須回 JSON actions；wrapper 不負責猜測自然語言。
-

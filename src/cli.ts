@@ -8,12 +8,17 @@ interface CliOptions {
   configPath: string;
   topic?: string;
   maxRounds?: number;
+  execute?: boolean;
 }
 
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const config = await loadDiscussionRunnerConfig(options.configPath);
-  const service = new DiscussionService({ rootDir: config.rootDir ?? "sessions" });
+  const service = new DiscussionService({
+    rootDir: config.rootDir ?? "sessions",
+    enableExecution: options.execute ?? config.enableExecution,
+    workspaceRootDir: config.workspaceRootDir ?? "workspaces"
+  });
   const agents = config.agents.map(createHermesAgentFromConfig);
 
   const session = await service.createSession({
@@ -32,12 +37,16 @@ async function main(): Promise<void> {
     messageCount: result.messageCount,
     roundsCompleted: result.roundsCompleted,
     taskAssignmentCount: result.taskAssignments.length,
+    executionResultCount: result.executionResults.length,
     files: {
       messages: `${rootDir}/${result.sessionId}/messages.jsonl`,
       events: `${rootDir}/${result.sessionId}/events.jsonl`,
       session: `${rootDir}/${result.sessionId}/session.json`,
-      result: `${rootDir}/${result.sessionId}/result.json`
+      result: `${rootDir}/${result.sessionId}/result.json`,
+      actions: `${rootDir}/${result.sessionId}/actions.jsonl`,
+      executionResults: `${rootDir}/${result.sessionId}/execution-results.jsonl`
     },
+    workspace: result.workspace,
     taskAssignments: result.taskAssignments
   }, null, 2));
 }
@@ -46,6 +55,7 @@ function parseArgs(args: string[]): CliOptions {
   let configPath = "hermes-agents.config.json";
   let topic: string | undefined;
   let maxRounds: number | undefined;
+  let execute = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -77,13 +87,19 @@ function parseArgs(args: string[]): CliOptions {
       process.exit(0);
     }
 
+    if (arg === "--execute") {
+      execute = true;
+      continue;
+    }
+
     throw new Error(`Unknown or incomplete argument '${arg}'.`);
   }
 
   return {
     configPath: resolve(configPath),
     topic,
-    maxRounds
+    maxRounds,
+    execute
   };
 }
 
@@ -94,6 +110,7 @@ Options:
   --config <path>       Path to Hermes discussion config. Default: hermes-agents.config.json
   --topic <topic>       Override the config topic.
   --max-rounds <count>  Override the config maxRounds.
+  --execute             Enable Phase 2 action execution.
   -h, --help            Show this help text.
 `);
 }

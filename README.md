@@ -24,6 +24,16 @@ npm run session
 
 The command reads `hermes-agents.config.json`, starts a moderated discussion, and writes output under `sessions/<sessionId>/`.
 
+## Start a Phase 2 Execution Smoke Test
+
+The repository includes a mock execution setup that writes a file inside an isolated workspace and runs an allowlisted command.
+
+```bash
+npm run session:execute
+```
+
+The command reads `hermes-agents.execution.config.json`, writes output under `sessions/<sessionId>/`, and creates a workspace under `workspaces/<sessionId>/`.
+
 ## Example
 
 ```ts

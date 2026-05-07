@@ -1,0 +1,63 @@
+{
+  "topic": "Phase 2 execution smoke test: create a small web MVP artifact",
+  "maxRounds": 1,
+  "rootDir": "sessions",
+  "enableExecution": true,
+  "workspaceRootDir": "workspaces",
+  "agents": [
+    {
+      "id": "hermes-a",
+      "name": "Hermes A",
+      "role": "planner",
+      "type": "mock",
+      "responses": [
+        {
+          "content": "I will create the MVP brief and ask Hermes B to inspect the workspace.",
+          "actions": [
+            {
+              "type": "mkdir",
+              "path": "docs"
+            },
+            {
+              "type": "write_file",
+              "path": "docs/web-mvp.md",
+              "content": "# Web MVP\n\n- Goal: introduce the product clearly.\n- Sections: hero, features, CTA.\n- Acceptance: content exists and can be reviewed.\n"
+            }
+          ],
+          "taskAssignments": [
+            {
+              "assignedAgentId": "hermes-b",
+              "title": "Inspect generated MVP brief",
+              "detail": "Read the generated web MVP brief and confirm the workspace action succeeded."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hermes-b",
+      "name": "Hermes B",
+      "role": "builder",
+      "type": "mock",
+      "responses": [
+        {
+          "content": "I will list the workspace docs directory to verify the MVP brief exists.",
+          "actions": [
+            {
+              "type": "run_command",
+              "command": "ls",
+              "args": ["docs"]
+            }
+          ],
+          "taskAssignments": [
+            {
+              "assignedAgentId": "hermes-a",
+              "title": "Review execution output",
+              "detail": "Review execution-results.jsonl and confirm the generated artifact is present."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

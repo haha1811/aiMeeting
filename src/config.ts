@@ -8,6 +8,8 @@ export interface DiscussionRunnerConfig {
   agents: HermesAgentConfig[];
   maxRounds?: number;
   rootDir?: string;
+  enableExecution?: boolean;
+  workspaceRootDir?: string;
 }
 
 export interface BaseHermesAgentConfig {

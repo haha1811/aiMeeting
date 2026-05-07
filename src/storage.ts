@@ -4,7 +4,9 @@ import type {
   DiscussionEvent,
   DiscussionMessage,
   DiscussionResult,
-  DiscussionSession
+  DiscussionSession,
+  ExecutionAction,
+  ExecutionResult
 } from "./types.js";
 
 export class JsonlDiscussionStore {
@@ -26,6 +28,14 @@ export class JsonlDiscussionStore {
     return join(this.sessionDir(sessionId), "result.json");
   }
 
+  actionsPath(sessionId: string): string {
+    return join(this.sessionDir(sessionId), "actions.jsonl");
+  }
+
+  executionResultsPath(sessionId: string): string {
+    return join(this.sessionDir(sessionId), "execution-results.jsonl");
+  }
+
   sessionPath(sessionId: string): string {
     return join(this.sessionDir(sessionId), "session.json");
   }
@@ -35,6 +45,8 @@ export class JsonlDiscussionStore {
     await this.writeSession(session);
     await this.ensureFile(this.messagesPath(session.sessionId));
     await this.ensureFile(this.eventsPath(session.sessionId));
+    await this.ensureFile(this.actionsPath(session.sessionId));
+    await this.ensureFile(this.executionResultsPath(session.sessionId));
   }
 
   async writeSession(session: DiscussionSession): Promise<void> {
@@ -60,6 +72,22 @@ export class JsonlDiscussionStore {
 
   async readEvents(sessionId: string): Promise<DiscussionEvent[]> {
     return this.readJsonl<DiscussionEvent>(this.eventsPath(sessionId));
+  }
+
+  async appendAction(action: ExecutionAction): Promise<void> {
+    await appendFile(this.actionsPath(action.sessionId), `${JSON.stringify(action)}\n`, "utf8");
+  }
+
+  async readActions(sessionId: string): Promise<ExecutionAction[]> {
+    return this.readJsonl<ExecutionAction>(this.actionsPath(sessionId));
+  }
+
+  async appendExecutionResult(result: ExecutionResult): Promise<void> {
+    await appendFile(this.executionResultsPath(result.sessionId), `${JSON.stringify(result)}\n`, "utf8");
+  }
+
+  async readExecutionResults(sessionId: string): Promise<ExecutionResult[]> {
+    return this.readJsonl<ExecutionResult>(this.executionResultsPath(sessionId));
   }
 
   async writeResult(result: DiscussionResult): Promise<void> {

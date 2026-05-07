@@ -4,30 +4,38 @@ import type {
   DiscussionMessage,
   DiscussionResult,
   DiscussionSession,
+  ExecutionAction,
+  ExecutionResult,
   HermesAgent,
   TaskAssignment,
   TaskAssignmentInput
 } from "./types.js";
+import { Executor } from "./executor.js";
 
 export interface ModeratorOptions {
   now?: () => Date;
   idFactory?: () => string;
+  executorFactory?: (session: DiscussionSession) => Executor | undefined;
 }
 
 export class Moderator {
   private readonly now: () => Date;
   private readonly idFactory: () => string;
+  private readonly executorFactory?: (session: DiscussionSession) => Executor | undefined;
 
   constructor(options: ModeratorOptions = {}) {
     this.now = options.now ?? (() => new Date());
     this.idFactory = options.idFactory ?? randomUUID;
+    this.executorFactory = options.executorFactory;
   }
 
   async run(
     session: DiscussionSession,
     agents: HermesAgent[],
     appendMessage: (message: DiscussionMessage) => Promise<void>,
-    persistSession: (session: DiscussionSession) => Promise<void>
+    persistSession: (session: DiscussionSession) => Promise<void>,
+    appendAction?: (action: ExecutionAction) => Promise<void>,
+    appendExecutionResult?: (result: ExecutionResult) => Promise<void>
   ): Promise<DiscussionResult> {
     this.assertRunnable(session, agents);
     session.status = "running";
@@ -38,6 +46,28 @@ export class Moderator {
       for (const agent of agents) {
         const response = await agent.respond(this.createContext(session, agent, round));
         const message = this.createMessage(session, agent, round, response.content, response.taskAssignments);
+        const executor = this.executorFactory?.(session);
+        const actions = (response.actions ?? []).map((action) => executor?.createAction(
+          action,
+          session.sessionId,
+          agent.id,
+          message.id
+        )).filter((action): action is ExecutionAction => Boolean(action));
+        const executionResults: ExecutionResult[] = [];
+
+        for (const action of actions) {
+          await appendAction?.(action);
+          if (!executor) {
+            continue;
+          }
+          const result = await executor.execute(action);
+          executionResults.push(result);
+          session.executionResults.push(result);
+          await appendExecutionResult?.(result);
+        }
+
+        message.executionActions = actions;
+        message.executionResults = executionResults;
         session.messages.push(message);
         session.taskAssignments.push(...(message.taskAssignments ?? []));
         session.updatedAt = message.createdAt;
@@ -75,7 +105,9 @@ export class Moderator {
       speaker: { id: agent.id, name: agent.name, role: agent.role },
       agents: session.agents,
       messages: [...session.messages],
-      taskAssignments: [...session.taskAssignments]
+      taskAssignments: [...session.taskAssignments],
+      executionResults: [...session.executionResults],
+      workspace: session.workspace
     };
   }
 
@@ -140,6 +172,8 @@ export class Moderator {
       status: session.status,
       completedAt: session.updatedAt,
       taskAssignments: session.taskAssignments,
+      executionResults: session.executionResults,
+      workspace: session.workspace,
       messageCount: session.messages.length,
       roundsCompleted
     };

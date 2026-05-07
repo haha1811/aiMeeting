@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { JsonlDiscussionStore } from "./storage.js";
 import { Moderator } from "./moderator.js";
+import { WorkspaceManager } from "./workspace.js";
+import { Executor } from "./executor.js";
 import type {
   AppendMessageInput,
   CreateSessionInput,
@@ -17,6 +19,8 @@ export interface DiscussionServiceOptions {
   rootDir?: string;
   store?: JsonlDiscussionStore;
   moderator?: Moderator;
+  workspaceRootDir?: string;
+  enableExecution?: boolean;
   now?: () => Date;
   idFactory?: () => string;
 }
@@ -24,6 +28,7 @@ export interface DiscussionServiceOptions {
 export class DiscussionService {
   private readonly store: JsonlDiscussionStore;
   private readonly moderator: Moderator;
+  private readonly workspaceManager?: WorkspaceManager;
   private readonly now: () => Date;
   private readonly idFactory: () => string;
   private readonly agentsBySession = new Map<string, HermesAgent[]>();
@@ -32,7 +37,15 @@ export class DiscussionService {
     this.store = options.store ?? new JsonlDiscussionStore(options.rootDir);
     this.now = options.now ?? (() => new Date());
     this.idFactory = options.idFactory ?? randomUUID;
-    this.moderator = options.moderator ?? new Moderator({ now: this.now, idFactory: this.idFactory });
+    this.workspaceManager = options.enableExecution ? new WorkspaceManager(options.workspaceRootDir) : undefined;
+    this.moderator = options.moderator ?? new Moderator({
+      now: this.now,
+      idFactory: this.idFactory,
+      executorFactory: (session) => session.workspace ? new Executor(session.workspace, {
+        now: this.now,
+        idFactory: this.idFactory
+      }) : undefined
+    });
   }
 
   async createSession(input: CreateSessionInput): Promise<DiscussionSession> {
@@ -41,8 +54,9 @@ export class DiscussionService {
     }
 
     const createdAt = this.timestamp();
+    const sessionId = this.idFactory();
     const session: DiscussionSession = {
-      sessionId: this.idFactory(),
+      sessionId,
       topic: input.topic,
       agents: input.agents.map((agent) => ({
         id: agent.id,
@@ -53,6 +67,8 @@ export class DiscussionService {
       status: "created",
       maxRounds: input.maxRounds ?? 3,
       taskAssignments: [],
+      executionResults: [],
+      workspace: this.workspaceManager ? await this.workspaceManager.initialize(sessionId) : undefined,
       createdAt,
       updatedAt: createdAt
     };
@@ -85,6 +101,12 @@ export class DiscussionService {
         },
         async (updatedSession) => {
           await this.store.writeSession(updatedSession);
+        },
+        async (action) => {
+          await this.store.appendAction(action);
+        },
+        async (executionResult) => {
+          await this.store.appendExecutionResult(executionResult);
         }
       );
       await this.store.writeResult(result);
@@ -133,6 +155,7 @@ export class DiscussionService {
   async getSession(sessionId: string): Promise<DiscussionSession> {
     const session = await this.store.readSession(sessionId);
     session.messages = await this.store.readMessages(sessionId);
+    session.executionResults = await this.store.readExecutionResults(sessionId);
     return session;
   }
 

@@ -204,3 +204,54 @@ test("integration with 3 fake agents produces deterministic transcript and assig
   );
   assert.equal(result.taskAssignments.length, 3);
 });
+
+test("executes agent actions and propagates execution results", async () => {
+  const rootDir = await mkdtemp(join(tmpdir(), "hermes-discussion-"));
+  const workspaceRootDir = await mkdtemp(join(tmpdir(), "hermes-workspaces-"));
+  const service = new DiscussionService({
+    rootDir,
+    workspaceRootDir,
+    enableExecution: true
+  });
+  const writer: HermesAgent = {
+    id: "writer",
+    name: "Writer",
+    async respond() {
+      return {
+        content: "writing file",
+        actions: [
+          {
+            type: "write_file",
+            path: "hello.txt",
+            content: "hello phase 2"
+          }
+        ]
+      };
+    }
+  };
+  const reader: HermesAgent = {
+    id: "reader",
+    name: "Reader",
+    async respond(context) {
+      return {
+        content: `saw ${context.executionResults?.length ?? 0} execution results`
+      };
+    }
+  };
+
+  const session = await service.createSession({
+    topic: "execute action",
+    agents: [writer, reader],
+    maxRounds: 1
+  });
+  const result = await service.runSession(session.sessionId);
+  const updated = await service.getSession(session.sessionId);
+
+  assert.equal(result.executionResults.length, 1);
+  assert.equal(result.executionResults[0]?.status, "succeeded");
+  assert.equal(updated.messages[1]?.content, "saw 1 execution results");
+  assert.equal(
+    await readFile(join(result.workspace?.repoPath ?? "", "hello.txt"), "utf8"),
+    "hello phase 2"
+  );
+});
