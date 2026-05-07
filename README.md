@@ -34,6 +34,14 @@ npm run session:execute
 
 The command reads `hermes-agents.execution.config.json`, writes output under `sessions/<sessionId>/`, and creates a workspace under `workspaces/<sessionId>/`.
 
+## Start Web Runner Console
+
+```bash
+npm run web
+```
+
+The command starts a runner-hosted Web console for launching sessions and replaying messages, actions, execution results, and workspace files.
+
 ## Example
 
 ```ts
@@ -117,6 +125,10 @@ See [docs/step_12_phase_2_real_hermes_execution_validation_2026_05_07.md](docs/s
 ## Phase 3 Web Runner Console Design
 
 See [docs/PHASE_3_WEB_RUNNER_CONSOLE_DESIGN.md](docs/PHASE_3_WEB_RUNNER_CONSOLE_DESIGN.md) for the proposed Web runner console, replay viewer, and later live monitor design.
+
+## Phase 3A Web Runner Console Runbook
+
+See [docs/PHASE_3A_WEB_RUNNER_CONSOLE_RUNBOOK.md](docs/PHASE_3A_WEB_RUNNER_CONSOLE_RUNBOOK.md) for runner EC2 startup and browser validation steps.
 
 ## Hermes Agent Guide
 
