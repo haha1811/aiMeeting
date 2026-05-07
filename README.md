@@ -135,6 +135,10 @@ See [docs/PHASE_3_WEB_RUNNER_CONSOLE_DESIGN.md](docs/PHASE_3_WEB_RUNNER_CONSOLE_
 
 See [docs/PHASE_3A_WEB_RUNNER_CONSOLE_RUNBOOK.md](docs/PHASE_3A_WEB_RUNNER_CONSOLE_RUNBOOK.md) for runner EC2 startup and browser validation steps.
 
+## Phase 3A Web Runner Console User Guide
+
+See [docs/PHASE_3A_WEB_RUNNER_CONSOLE_USER_GUIDE.md](docs/PHASE_3A_WEB_RUNNER_CONSOLE_USER_GUIDE.md) for a user-facing guide to running sessions and reading replay results in the browser.
+
 ## Hermes Agent Guide
 
 See [docs/HERMES_AGENT_GUIDE.md](docs/HERMES_AGENT_GUIDE.md) for an agent-oriented runbook that explains how a Hermes agent can set up, verify, integrate, and use this repository by itself.
