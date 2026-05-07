@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hermes Runner Console</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="runner-panel">
+        <header>
+          <p class="eyebrow">Runner</p>
+          <h1>Hermes Console</h1>
+        </header>
+        <form id="run-form" class="control-form">
+          <label>
+            Topic
+            <textarea id="topic" rows="8" required></textarea>
+          </label>
+          <div class="form-row">
+            <label>
+              Max rounds
+              <input id="maxRounds" type="number" min="1" value="2">
+            </label>
+            <label class="toggle-row">
+              <input id="enableExecution" type="checkbox" checked>
+              Execute actions
+            </label>
+          </div>
+          <label>
+            Planner URL
+            <input id="plannerUrl" type="url" required>
+          </label>
+          <label>
+            Builder URL
+            <input id="builderUrl" type="url" required>
+          </label>
+          <button id="runButton" type="submit">Run Session</button>
+          <button id="resetButton" type="button" class="secondary">Reset Defaults</button>
+        </form>
+        <section>
+          <h2>Sessions</h2>
+          <div id="session-list" class="session-list"></div>
+        </section>
+      </aside>
+      <section class="main-panel">
+        <div id="status-banner" class="status-banner">Ready</div>
+        <section id="summary" class="summary-grid"></section>
+        <section class="content-grid">
+          <div>
+            <h2>Meeting Timeline</h2>
+            <div id="timeline" class="timeline"></div>
+          </div>
+          <aside class="execution-panel">
+            <h2>Execution</h2>
+            <div id="execution"></div>
+            <h2>Workspace Files</h2>
+            <div id="workspace-files"></div>
+          </aside>
+        </section>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
