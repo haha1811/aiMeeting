@@ -505,6 +505,48 @@ agents/hermes-http-real.js
 
 讓 `buildPrompt(context)` 明確要求 JSON action output。
 
+若你看到 runner 輸出：
+
+```json
+{
+  "executionResultCount": 0
+}
+```
+
+代表 HTTP wrapper 有回覆討論內容，但 runner 沒收到 `actions` 陣列。請先在 hermes-a 與 hermes-b 更新 repo：
+
+```bash
+cd ~/projects/aiMeeting
+git pull
+node --check agents/hermes-http-real.js
+```
+
+然後停止舊的 wrapper process，重新啟動 hermes-a / hermes-b：
+
+```bash
+PORT=4101 \
+AGENT_ID=hermes-a \
+AGENT_NAME="Hermes A" \
+AGENT_ROLE="planner" \
+HERMES_TIMEOUT_MS=300000 \
+node agents/hermes-http-real.js
+```
+
+```bash
+PORT=4102 \
+AGENT_ID=hermes-b \
+AGENT_NAME="Hermes B" \
+AGENT_ROLE="builder" \
+HERMES_TIMEOUT_MS=300000 \
+node agents/hermes-http-real.js
+```
+
+再回 runner 重新執行：
+
+```bash
+npm run session -- --config hermes-agents.real-execution.config.json --execute
+```
+
 ## 11. 驗收標準
 
 本階段成功條件：
