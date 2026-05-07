@@ -106,6 +106,10 @@ See [docs/step_11_real_hermes_agent_setup_guide_2026_05_06.md](docs/step_11_real
 
 See [docs/PHASE_2_EXECUTION_DESIGN.md](docs/PHASE_2_EXECUTION_DESIGN.md) for the proposed autonomous execution design, action schema, workspace model, and MVP implementation order.
 
+## Phase 2 Real Hermes Execution Runbook
+
+See [docs/PHASE_2_REAL_HERMES_EXECUTION_RUNBOOK.md](docs/PHASE_2_REAL_HERMES_EXECUTION_RUNBOOK.md) for ordered runner / hermes-a / hermes-b EC2 steps to validate real Hermes action execution.
+
 ## Hermes Agent Guide
 
 See [docs/HERMES_AGENT_GUIDE.md](docs/HERMES_AGENT_GUIDE.md) for an agent-oriented runbook that explains how a Hermes agent can set up, verify, integrate, and use this repository by itself.
