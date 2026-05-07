@@ -50,8 +50,8 @@ export function createWebServer(options: WebServerOptions): http.Server {
         return;
       }
 
-      if (req.method === "GET") {
-        await serveStatic(res, options.publicDir, url.pathname);
+      if (req.method === "GET" || req.method === "HEAD") {
+        await serveStatic(res, options.publicDir, url.pathname, req.method === "HEAD");
         return;
       }
 
@@ -71,7 +71,12 @@ async function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return body ? JSON.parse(body) : {};
 }
 
-async function serveStatic(res: http.ServerResponse, publicDir: string, pathname: string): Promise<void> {
+async function serveStatic(
+  res: http.ServerResponse,
+  publicDir: string,
+  pathname: string,
+  headOnly: boolean
+): Promise<void> {
   const relativePath = pathname === "/" ? "index.html" : pathname.slice(1);
   const normalized = normalize(relativePath);
   if (normalized.startsWith("..")) {
@@ -83,7 +88,7 @@ async function serveStatic(res: http.ServerResponse, publicDir: string, pathname
     const filePath = join(publicDir, normalized);
     const content = await readFile(filePath);
     res.writeHead(200, { "content-type": contentType(filePath) });
-    res.end(content);
+    res.end(headOnly ? undefined : content);
   } catch {
     await sendJson(res, 404, { error: "not found" });
   }

@@ -22,6 +22,10 @@ test("web server serves default config and rejects unknown routes", async () => 
 
     const missingResponse = await fetch(`http://127.0.0.1:${port}/missing`);
     assert.equal(missingResponse.status, 404);
+
+    const headResponse = await fetch(`http://127.0.0.1:${port}/`, { method: "HEAD" });
+    assert.equal(headResponse.status, 200);
+    assert.match(headResponse.headers.get("content-type") ?? "", /text\/html/);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
