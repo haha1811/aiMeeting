@@ -114,6 +114,10 @@ See [docs/PHASE_2_REAL_HERMES_EXECUTION_RUNBOOK.md](docs/PHASE_2_REAL_HERMES_EXE
 
 See [docs/step_12_phase_2_real_hermes_execution_validation_2026_05_07.md](docs/step_12_phase_2_real_hermes_execution_validation_2026_05_07.md) for the completed three-EC2 validation record, including the successful `executionResultCount: 10` session.
 
+## Phase 3 Web Runner Console Design
+
+See [docs/PHASE_3_WEB_RUNNER_CONSOLE_DESIGN.md](docs/PHASE_3_WEB_RUNNER_CONSOLE_DESIGN.md) for the proposed Web runner console, replay viewer, and later live monitor design.
+
 ## Hermes Agent Guide
 
 See [docs/HERMES_AGENT_GUIDE.md](docs/HERMES_AGENT_GUIDE.md) for an agent-oriented runbook that explains how a Hermes agent can set up, verify, integrate, and use this repository by itself.
