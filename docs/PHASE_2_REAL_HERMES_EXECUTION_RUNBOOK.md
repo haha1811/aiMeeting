@@ -170,10 +170,25 @@ node agents/hermes-http-real.js
 預期 log：
 
 ```text
-hermes-a real Hermes wrapper listening on 0.0.0.0:4101/respond
+hermes-a real-hermes-wrapper-action-json-v3 listening on 0.0.0.0:4101
 ```
 
 保持 terminal 開著。
+
+確認 wrapper 版本：
+
+```bash
+curl -s http://localhost:4101/health
+```
+
+預期看到：
+
+```json
+{
+  "ok": true,
+  "wrapperVersion": "real-hermes-wrapper-action-json-v3"
+}
+```
 
 ### 4.4 hermes-a 本機 curl 測試
 
@@ -245,7 +260,22 @@ node agents/hermes-http-real.js
 預期 log：
 
 ```text
-hermes-b real Hermes wrapper listening on 0.0.0.0:4102/respond
+hermes-b real-hermes-wrapper-action-json-v3 listening on 0.0.0.0:4102
+```
+
+確認 wrapper 版本：
+
+```bash
+curl -s http://localhost:4102/health
+```
+
+預期看到：
+
+```json
+{
+  "ok": true,
+  "wrapperVersion": "real-hermes-wrapper-action-json-v3"
+}
 ```
 
 ### 5.4 hermes-b 本機 curl 測試
@@ -322,6 +352,18 @@ export HERMES_B_PRIVATE_IP=10.100.1.32
 
 ### 6.3 runner curl 測 hermes-a
 
+先確認 runner 連到的是新版 wrapper：
+
+```bash
+curl -s "http://${HERMES_A_PRIVATE_IP}:4101/health"
+```
+
+預期 `wrapperVersion` 是：
+
+```text
+real-hermes-wrapper-action-json-v3
+```
+
 ```bash
 curl -s "http://${HERMES_A_PRIVATE_IP}:4101/respond" \
   -H 'content-type: application/json' \
@@ -342,6 +384,18 @@ curl -s "http://${HERMES_A_PRIVATE_IP}:4101/respond" \
 ```
 
 ### 6.4 runner curl 測 hermes-b
+
+先確認 runner 連到的是新版 wrapper：
+
+```bash
+curl -s "http://${HERMES_B_PRIVATE_IP}:4102/health"
+```
+
+預期 `wrapperVersion` 是：
+
+```text
+real-hermes-wrapper-action-json-v3
+```
 
 ```bash
 curl -s "http://${HERMES_B_PRIVATE_IP}:4102/respond" \
@@ -541,11 +595,35 @@ HERMES_TIMEOUT_MS=300000 \
 node agents/hermes-http-real.js
 ```
 
+重新啟動後，請務必確認 health endpoint：
+
+```bash
+curl -s http://localhost:4101/health
+curl -s http://localhost:4102/health
+```
+
+runner 也要確認 private IP health endpoint：
+
+```bash
+curl -s "http://${HERMES_A_PRIVATE_IP}:4101/health"
+curl -s "http://${HERMES_B_PRIVATE_IP}:4102/health"
+```
+
+如果 `wrapperVersion` 不是 `real-hermes-wrapper-action-json-v3`，代表你連到的還是舊 process 或舊機器。
+
 再回 runner 重新執行：
 
 ```bash
 npm run session -- --config hermes-agents.real-execution.config.json --execute
 ```
+
+執行過程中，hermes-a / hermes-b wrapper terminal 應該會印出類似：
+
+```json
+{"event":"respond.completed","wrapperVersion":"real-hermes-wrapper-action-json-v3","actionCount":3}
+```
+
+如果 `actionCount` 一直是 `0`，代表 Hermes 有遵守 HTTP 回覆，但沒有照 prompt 產生 actions。這時請把該次 wrapper terminal log 與 runner 的 `messages.jsonl` 貼回來。
 
 ## 11. 驗收標準
 

@@ -9,6 +9,7 @@ const agentId = process.env.AGENT_ID ?? "hermes-a";
 const agentName = process.env.AGENT_NAME ?? "Hermes A";
 const agentRole = process.env.AGENT_ROLE ?? "planner";
 const hermesTimeoutMs = Number.parseInt(process.env.HERMES_TIMEOUT_MS ?? "300000", 10);
+const wrapperVersion = "real-hermes-wrapper-action-json-v3";
 
 function readJson(req) {
   return new Promise((resolve, reject) => {
@@ -229,6 +230,19 @@ actions 只能使用以下型別：
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.method === "GET" && req.url === "/health") {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({
+      ok: true,
+      wrapperVersion,
+      agentId,
+      agentName,
+      agentRole,
+      port
+    }));
+    return;
+  }
+
   if (req.method !== "POST" || req.url !== "/respond") {
     res.writeHead(404, { "content-type": "application/json" });
     res.end(JSON.stringify({ error: "not found" }));
@@ -240,6 +254,16 @@ const server = http.createServer(async (req, res) => {
     const prompt = buildPrompt(context);
     const content = await runHermes(prompt);
     const response = normalizeHermesOutput(content);
+    console.log(JSON.stringify({
+      event: "respond.completed",
+      wrapperVersion,
+      sessionId: context.sessionId,
+      round: context.round,
+      agentId,
+      actionCount: response.actions.length,
+      taskAssignmentCount: response.taskAssignments.length,
+      contentLength: response.content.length
+    }));
 
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify(response));
@@ -252,5 +276,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, "0.0.0.0", () => {
-  console.log(`${agentId} real Hermes wrapper listening on 0.0.0.0:${port}/respond`);
+  console.log(`${agentId} ${wrapperVersion} listening on 0.0.0.0:${port}`);
 });
