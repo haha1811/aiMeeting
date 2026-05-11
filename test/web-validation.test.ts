@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   assertSafeSessionId,
+  validateAgentHealthCheckRequest,
   validateRunSessionRequest
 } from "../src/web/validation.js";
 
@@ -69,4 +70,18 @@ test("assertSafeSessionId rejects path traversal", () => {
   assert.throws(() => assertSafeSessionId("../secret"), /Invalid sessionId/);
   assert.throws(() => assertSafeSessionId("abc/def"), /Invalid sessionId/);
   assert.doesNotThrow(() => assertSafeSessionId("d9377c90-a800-401d-8029-f1ba3793ea95"));
+});
+
+test("validateAgentHealthCheckRequest rejects invalid URL", () => {
+  assert.throws(
+    () => validateAgentHealthCheckRequest({ url: "not-a-url" }),
+    /url must be a valid http or https URL/
+  );
+});
+
+test("validateAgentHealthCheckRequest accepts respond URL", () => {
+  assert.deepEqual(
+    validateAgentHealthCheckRequest({ url: "http://10.100.1.21:4101/respond" }),
+    { url: "http://10.100.1.21:4101/respond" }
+  );
 });

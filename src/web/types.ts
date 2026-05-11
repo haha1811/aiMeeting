@@ -17,6 +17,21 @@ export interface WebRunSessionRequest {
   agents: HttpHermesAgentConfig[];
 }
 
+export interface WebAgentHealthCheckRequest {
+  url: string;
+}
+
+export interface WebAgentHealthCheckResponse {
+  ok: boolean;
+  healthUrl: string;
+  latencyMs?: number;
+  agentId?: string;
+  agentName?: string;
+  agentRole?: string;
+  wrapperVersion?: string;
+  error?: string;
+}
+
 export interface WebRunSessionResponse {
   sessionId: string;
   status: string;

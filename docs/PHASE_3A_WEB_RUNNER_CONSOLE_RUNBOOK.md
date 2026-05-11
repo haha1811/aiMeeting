@@ -52,6 +52,7 @@ In the Web form:
 - Set maxRounds to 2.
 - Enable execution.
 - Confirm planner and builder URLs.
+- Click Check next to Planner URL and Builder URL. Both should show a green `✓` before running.
 - Click Run Session.
 
 Expected:
@@ -61,6 +62,7 @@ Expected:
 - Meeting Timeline shows Hermes A and Hermes B messages.
 - Execution panel shows actions and execution results.
 - Workspace Files shows files created under `workspaces/<sessionId>/repo`.
+- The selected session remains highlighted in the Sessions list.
 
 ## Troubleshooting
 

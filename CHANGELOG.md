@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.2.1 - Phase 3A.1 Web Console Usability
+
+Released: 2026-05-11
+
+### Added
+
+- Added Planner URL and Builder URL health-check buttons in the Web Runner Console.
+- Added runner-side `/api/agents/check` endpoint for validating Hermes wrapper connectivity.
+- Added selected-session highlight in the Sessions list.
+
 ## v0.2.0 - Phase 3A Web Runner Console
 
 Released: 2026-05-07
