@@ -96,6 +96,31 @@ export interface DiscussionResult {
   roundsCompleted: number;
 }
 
+export interface DiscussionLifecycleHooks {
+  onSessionStarted?: (sessionId: string) => void | Promise<void>;
+  onSpeakerActive?: (context: {
+    sessionId: string;
+    agentId: string;
+    agentName: string;
+    role?: string;
+    round: number;
+  }) => void | Promise<void>;
+  onMessageAppended?: (message: DiscussionMessage) => void | Promise<void>;
+  onActionCreated?: (context: {
+    sessionId: string;
+    action: ExecutionAction;
+  }) => void | Promise<void>;
+  onExecutionResult?: (context: {
+    sessionId: string;
+    result: ExecutionResult;
+  }) => void | Promise<void>;
+  onSessionCompleted?: (sessionId: string) => void | Promise<void>;
+  onSessionFailed?: (context: {
+    sessionId: string;
+    error: string;
+  }) => void | Promise<void>;
+}
+
 export interface CreateSessionInput {
   topic: string;
   agents: HermesAgent[];
