@@ -119,8 +119,12 @@ async function runSession(event) {
 
 async function loadSessions() {
   const sessions = await fetchJson("/api/sessions");
+  renderSessionList(sessions);
+}
+
+function renderSessionList(sessions) {
   $("session-list").innerHTML = sessions.map((session) => `
-    <button class="session-item" data-session-id="${escapeHtml(session.sessionId)}">
+    <button class="session-item ${session.sessionId === state.selectedSessionId ? "selected" : ""}" data-session-id="${escapeHtml(session.sessionId)}">
       <strong>${escapeHtml(session.status)}</strong>
       <span>${escapeHtml(session.topic)}</span>
       <small>${escapeHtml(session.updatedAt)}</small>
@@ -138,6 +142,9 @@ async function loadReplay(sessionId) {
   renderTimeline(replay);
   renderExecution(replay);
   renderWorkspaceFiles(replay.workspaceFiles);
+  document.querySelectorAll("[data-session-id]").forEach((button) => {
+    button.classList.toggle("selected", button.dataset.sessionId === sessionId);
+  });
 }
 
 function renderSummary(replay) {

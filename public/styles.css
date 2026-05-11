@@ -153,6 +153,16 @@ button.secondary { background: #e7ebf3; color: #243047; }
   white-space: nowrap;
 }
 
+.session-item.selected {
+  background: #eef4ff;
+  border-color: #2454d6;
+  border-left: 4px solid #2454d6;
+}
+
+.session-item.selected strong {
+  color: #173d8f;
+}
+
 .main-panel {
   padding: 24px;
   overflow: auto;
