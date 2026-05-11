@@ -3,6 +3,7 @@ import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import {
+  checkAgentHealth,
   getDefaultConfig,
   getSessionReplay,
   listSessionSummaries,
@@ -27,6 +28,12 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
       if (req.method === "GET" && url.pathname === "/api/sessions") {
         await sendJson(res, 200, await listSessionSummaries(options.rootDir));
+        return;
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/agents/check") {
+        const body = await readJsonBody(req);
+        await sendJson(res, 200, await checkAgentHealth(body));
         return;
       }
 
