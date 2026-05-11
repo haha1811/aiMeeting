@@ -28,14 +28,22 @@
               Execute actions
             </label>
           </div>
-          <label>
-            Planner URL
-            <input id="plannerUrl" type="url" required>
-          </label>
-          <label>
-            Builder URL
-            <input id="builderUrl" type="url" required>
-          </label>
+          <div class="endpoint-field">
+            <label for="plannerUrl">Planner URL</label>
+            <div class="endpoint-row">
+              <input id="plannerUrl" type="url" required>
+              <button id="checkPlannerButton" type="button" class="icon-button" title="Check Planner URL">Check</button>
+              <span id="plannerHealth" class="health-status idle" aria-live="polite">-</span>
+            </div>
+          </div>
+          <div class="endpoint-field">
+            <label for="builderUrl">Builder URL</label>
+            <div class="endpoint-row">
+              <input id="builderUrl" type="url" required>
+              <button id="checkBuilderButton" type="button" class="icon-button" title="Check Builder URL">Check</button>
+              <span id="builderHealth" class="health-status idle" aria-live="polite">-</span>
+            </div>
+          </div>
           <button id="runButton" type="submit">Run Session</button>
           <button id="resetButton" type="button" class="secondary">Reset Defaults</button>
         </form>

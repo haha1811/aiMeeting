@@ -46,6 +46,22 @@ label {
   color: #3d4758;
 }
 
+.endpoint-field {
+  display: grid;
+  gap: 6px;
+}
+
+.endpoint-field > label {
+  display: block;
+}
+
+.endpoint-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 34px;
+  gap: 8px;
+  align-items: center;
+}
+
 input, textarea {
   width: 100%;
   border: 1px solid #cbd3df;
@@ -80,6 +96,42 @@ button {
 
 button:disabled { opacity: 0.6; cursor: wait; }
 button.secondary { background: #e7ebf3; color: #243047; }
+
+.icon-button {
+  min-width: 64px;
+  background: #eef2f8;
+  color: #243047;
+  border: 1px solid #cbd3df;
+}
+
+.health-status {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid #cbd3df;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.health-status.idle,
+.health-status.checking {
+  background: #f6f8fb;
+  color: #697386;
+}
+
+.health-status.ok {
+  background: #dcf7e8;
+  border-color: #75c78c;
+  color: #17633a;
+}
+
+.health-status.failed {
+  background: #fde2e2;
+  border-color: #ef9b9b;
+  color: #8f1d1d;
+}
 
 .session-list {
   display: grid;

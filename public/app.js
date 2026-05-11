@@ -11,6 +11,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     await loadSessions();
     $("run-form").addEventListener("submit", runSession);
     $("resetButton").addEventListener("click", applyDefaults);
+    $("checkPlannerButton").addEventListener("click", () => checkEndpoint("planner"));
+    $("checkBuilderButton").addEventListener("click", () => checkEndpoint("builder"));
   } catch (error) {
     setStatus(error.message, "failed");
   }
@@ -29,6 +31,46 @@ function applyDefaults() {
   $("enableExecution").checked = Boolean(config.enableExecution);
   $("plannerUrl").value = config.agents?.[0]?.url ?? "";
   $("builderUrl").value = config.agents?.[1]?.url ?? "";
+  resetEndpointHealth();
+}
+
+async function checkEndpoint(kind) {
+  const urlInput = kind === "planner" ? $("plannerUrl") : $("builderUrl");
+  const button = kind === "planner" ? $("checkPlannerButton") : $("checkBuilderButton");
+  const status = kind === "planner" ? $("plannerHealth") : $("builderHealth");
+
+  setEndpointHealth(status, "checking", "...");
+  button.disabled = true;
+
+  try {
+    const result = await fetchJson("/api/agents/check", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url: urlInput.value })
+    });
+    if (!result.ok) {
+      setEndpointHealth(status, "failed", "X", result.error ?? "Connection failed");
+      return;
+    }
+    const agentLabel = [result.agentName, result.agentId].filter(Boolean).join(" / ");
+    setEndpointHealth(status, "ok", "✓", agentLabel || "Connected");
+  } catch (error) {
+    setEndpointHealth(status, "failed", "X", error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function resetEndpointHealth() {
+  setEndpointHealth($("plannerHealth"), "idle", "-", "Not checked");
+  setEndpointHealth($("builderHealth"), "idle", "-", "Not checked");
+}
+
+function setEndpointHealth(element, status, text, title = "") {
+  element.textContent = text;
+  element.title = title;
+  element.className = `health-status ${status}`;
+  element.setAttribute("aria-label", title || text);
 }
 
 async function runSession(event) {
