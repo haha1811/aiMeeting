@@ -1,5 +1,5 @@
 import type { HttpHermesAgentConfig } from "../config.js";
-import type { WebRunSessionRequest } from "./types.js";
+import type { WebAgentHealthCheckRequest, WebRunSessionRequest } from "./types.js";
 
 export function validateRunSessionRequest(value: unknown): WebRunSessionRequest {
   if (!isRecord(value)) {
@@ -47,6 +47,19 @@ export function assertSafeSessionId(sessionId: string): void {
   if (!/^[a-zA-Z0-9._-]+$/.test(sessionId) || sessionId.includes("..")) {
     throw new Error(`Invalid sessionId '${sessionId}'.`);
   }
+}
+
+export function validateAgentHealthCheckRequest(value: unknown): WebAgentHealthCheckRequest {
+  if (!isRecord(value)) {
+    throw new Error("Request body must be a JSON object.");
+  }
+
+  if (typeof value.url !== "string" || !value.url.trim()) {
+    throw new Error("url must be a non-empty string.");
+  }
+
+  assertHttpUrl(value.url.trim(), "agent");
+  return { url: value.url.trim() };
 }
 
 function validateHttpAgent(value: unknown): HttpHermesAgentConfig {
