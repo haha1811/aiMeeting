@@ -162,6 +162,7 @@ Runner Control 是左側操作區。
 | Execute actions | 是否讓 runner 執行 Hermes 回傳的 actions |
 | Planner URL | Hermes A `/respond` endpoint |
 | Builder URL | Hermes B `/respond` endpoint |
+| Check | 由 runner 代為檢查對應 Hermes endpoint 是否可連線 |
 | Run Session | 建立並執行 session |
 | Reset Defaults | 還原預設欄位 |
 
@@ -177,11 +178,25 @@ Builder URL 範例：
 http://10.100.1.32:4102/respond
 ```
 
+Planner URL 與 Builder URL 旁邊各有一個 Check 按鈕。按下後，runner 會把 `/respond` 轉成 `/health` 進行檢查。
+
+狀態顯示：
+
+| 圖示 | 意義 |
+| --- | --- |
+| ✓ | runner 可以連到該 Hermes wrapper |
+| X | runner 無法連到該 Hermes wrapper，或 wrapper 回傳非成功狀態 |
+| - | 尚未檢查 |
+
+建議在按 Run Session 前，先確認 Planner URL 與 Builder URL 都出現綠色 ✓。
+
 ### 5.2 Sessions
 
 左側下方的 Sessions 會列出 runner 已經執行過的 session。
 
 你可以點選既有 session，查看它的 replay。
+
+目前選取的 session 會以較明顯的底色與左側藍色標線顯示。當執行記錄變多時，可以用這個標示確認主畫面正在查看哪一筆 session。
 
 這個功能等同於用 Web 讀取：
 
@@ -320,6 +335,8 @@ Planner URL: http://10.100.1.21:4101/respond
 Builder URL: http://10.100.1.32:4102/respond
 ```
 
+接著按 Planner URL 與 Builder URL 旁邊的 Check。兩個 endpoint 都顯示綠色 ✓ 後，再繼續執行。
+
 ### Step 6：按 Run Session
 
 Web 會顯示 running 狀態。
@@ -441,4 +458,3 @@ Live Monitor
 - 新 action 即時出現
 - execution result 即時更新
 - runner 目前正在呼叫哪個 agent 可以被看見
-
