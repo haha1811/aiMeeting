@@ -1,9 +1,12 @@
 import { mkdtemp, writeFile } from "node:fs/promises";
+import http from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  checkAgentHealth,
+  deriveHealthUrl,
   getDefaultConfig,
   getSessionReplay,
   listSessionSummaries,
@@ -112,4 +115,57 @@ test("getDefaultConfig reads existing config when present", async () => {
   const config = await getDefaultConfig(configPath);
 
   assert.equal(config.topic, "from file");
+});
+
+test("deriveHealthUrl converts respond URL to health URL", () => {
+  assert.equal(
+    deriveHealthUrl("http://10.100.1.21:4101/respond"),
+    "http://10.100.1.21:4101/health"
+  );
+});
+
+test("checkAgentHealth returns wrapper metadata for healthy endpoint", async () => {
+  const server = http.createServer((req, res) => {
+    assert.equal(req.url, "/health");
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({
+      ok: true,
+      wrapperVersion: "real-hermes-wrapper-action-json-v3",
+      agentId: "hermes-a",
+      agentName: "Hermes A",
+      agentRole: "planner"
+    }));
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+
+  try {
+    const result = await checkAgentHealth({ url: `http://127.0.0.1:${port}/respond` });
+    assert.equal(result.ok, true);
+    assert.equal(result.wrapperVersion, "real-hermes-wrapper-action-json-v3");
+    assert.equal(result.agentId, "hermes-a");
+    assert.equal(result.healthUrl, `http://127.0.0.1:${port}/health`);
+    assert.equal(typeof result.latencyMs, "number");
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+test("checkAgentHealth returns ok false for failed endpoint", async () => {
+  const server = http.createServer((_req, res) => {
+    res.writeHead(500, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: "not ready" }));
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+
+  try {
+    const result = await checkAgentHealth({ url: `http://127.0.0.1:${port}/respond` });
+    assert.equal(result.ok, false);
+    assert.match(result.error ?? "", /HTTP 500/);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 });

@@ -4,8 +4,9 @@ import { loadDiscussionRunnerConfig } from "../config.js";
 import { DiscussionService } from "../service.js";
 import type { DiscussionResult, HermesAgent, HttpHermesAgentConfig } from "../index.js";
 import { listSessions, readSessionReplay } from "./session-reader.js";
-import { validateRunSessionRequest } from "./validation.js";
+import { validateAgentHealthCheckRequest, validateRunSessionRequest } from "./validation.js";
 import type {
+  WebAgentHealthCheckResponse,
   WebDefaultConfig,
   WebRunSessionRequest,
   WebRunSessionResponse,
@@ -99,6 +100,55 @@ export async function listSessionSummaries(rootDir: string): Promise<WebSessionL
 
 export async function getSessionReplay(options: WebHandlerOptions & { sessionId: string }): Promise<WebSessionReplay> {
   return readSessionReplay(options);
+}
+
+export async function checkAgentHealth(request: unknown): Promise<WebAgentHealthCheckResponse> {
+  const { url } = validateAgentHealthCheckRequest(request);
+  const healthUrl = deriveHealthUrl(url);
+  const started = Date.now();
+
+  try {
+    const response = await fetch(healthUrl, { method: "GET" });
+    const raw = await response.text();
+    const parsed = raw ? JSON.parse(raw) as Record<string, unknown> : {};
+    if (!response.ok) {
+      return {
+        ok: false,
+        healthUrl,
+        latencyMs: Date.now() - started,
+        error: `HTTP ${response.status}: ${raw}`
+      };
+    }
+
+    return {
+      ok: Boolean(parsed.ok),
+      healthUrl,
+      latencyMs: Date.now() - started,
+      agentId: stringField(parsed.agentId),
+      agentName: stringField(parsed.agentName),
+      agentRole: stringField(parsed.agentRole),
+      wrapperVersion: stringField(parsed.wrapperVersion)
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      healthUrl,
+      latencyMs: Date.now() - started,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+export function deriveHealthUrl(respondUrl: string): string {
+  const parsed = new URL(respondUrl);
+  parsed.pathname = "/health";
+  parsed.search = "";
+  parsed.hash = "";
+  return parsed.toString();
+}
+
+function stringField(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
 }
 
 async function exists(path: string): Promise<boolean> {
