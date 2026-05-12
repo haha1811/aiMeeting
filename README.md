@@ -144,6 +144,10 @@ See [docs/PHASE_3A_WEB_RUNNER_CONSOLE_USER_GUIDE.md](docs/PHASE_3A_WEB_RUNNER_CO
 
 See [docs/PHASE_3B_LIVE_MONITOR_RUNBOOK.md](docs/PHASE_3B_LIVE_MONITOR_RUNBOOK.md) for live monitoring setup and browser validation steps.
 
+## Phase 4 Real EC2 Live Monitor Validation
+
+See [docs/PHASE_4_REAL_EC2_LIVE_VALIDATION_RUNBOOK.md](docs/PHASE_4_REAL_EC2_LIVE_VALIDATION_RUNBOOK.md) for the three-EC2 validation plan and operational hardening checklist.
+
 ## Hermes Agent Guide
 
 See [docs/HERMES_AGENT_GUIDE.md](docs/HERMES_AGENT_GUIDE.md) for an agent-oriented runbook that explains how a Hermes agent can set up, verify, integrate, and use this repository by itself.
