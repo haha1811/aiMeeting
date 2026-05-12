@@ -170,3 +170,67 @@ test("web server streams live events for a session", async () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 });
+
+test("web server sends current job status to late event subscribers", async () => {
+  const rootDir = await mkdtemp(join(tmpdir(), "web-live-late-sessions-"));
+  const workspaceRootDir = await mkdtemp(join(tmpdir(), "web-live-late-workspaces-"));
+  const server = createWebServer({
+    rootDir,
+    workspaceRootDir,
+    publicDir: "public",
+    agentFactory: (agent) => ({
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      async respond() {
+        return { content: `${agent.id} live` };
+      }
+    })
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+
+  try {
+    const jobResponse = await fetch(`http://127.0.0.1:${port}/api/sessions/jobs`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        topic: "server late sse",
+        maxRounds: 1,
+        enableExecution: false,
+        agents: [
+          { id: "a", name: "A", role: "planner", type: "http", url: "http://mock.local/a" },
+          { id: "b", name: "B", role: "builder", type: "http", url: "http://mock.local/b" }
+        ]
+      })
+    });
+    const job = await jobResponse.json() as { eventsUrl: string };
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 200);
+    try {
+      const eventResponse = await fetch(`http://127.0.0.1:${port}${job.eventsUrl}`, {
+        signal: controller.signal
+      });
+      const reader = eventResponse.body?.getReader();
+      assert.ok(reader);
+
+      const chunk = await reader.read();
+      const text = new TextDecoder().decode(chunk.value);
+      assert.match(text, /event: session\.completed/);
+      assert.match(text, /"status":"completed"/);
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("timed out waiting for event");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      controller.abort();
+    }
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});

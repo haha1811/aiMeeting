@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { randomUUID } from "node:crypto";
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
@@ -14,6 +15,7 @@ import {
 } from "./handlers.js";
 import { LiveEventBus } from "./live-event-bus.js";
 import { LiveSessionJobRegistry } from "./live-session-jobs.js";
+import type { LiveSessionEvent, LiveSessionJob } from "./live-types.js";
 import { writeSseEvent, writeSseHeaders } from "./sse.js";
 
 export interface WebServerOptions {
@@ -84,8 +86,13 @@ export function createWebServer(options: WebServerOptions): http.Server {
 
       const eventsMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/events$/);
       if (req.method === "GET" && eventsMatch?.[1]) {
+        const sessionId = eventsMatch[1];
         writeSseHeaders(res);
-        const unsubscribe = eventBus.subscribe(eventsMatch[1], (event) => {
+        const job = liveJobs.getJob(sessionId);
+        if (job) {
+          writeSseEvent(res, currentJobEvent(job));
+        }
+        const unsubscribe = eventBus.subscribe(sessionId, (event) => {
           writeSseEvent(res, event);
         });
         req.on("close", unsubscribe);
@@ -102,6 +109,25 @@ export function createWebServer(options: WebServerOptions): http.Server {
       await sendJson(res, 500, { error: error instanceof Error ? error.message : String(error) });
     }
   });
+}
+
+function currentJobEvent(job: LiveSessionJob): LiveSessionEvent {
+  const base = {
+    id: randomUUID(),
+    sessionId: job.sessionId,
+    createdAt: new Date().toISOString()
+  };
+
+  switch (job.status) {
+    case "queued":
+      return { ...base, type: "session.queued", data: { status: "queued" } };
+    case "running":
+      return { ...base, type: "session.started", data: { status: "running" } };
+    case "completed":
+      return { ...base, type: "session.completed", data: { status: "completed" } };
+    case "failed":
+      return { ...base, type: "session.failed", data: { error: job.error ?? "Session failed." } };
+  }
 }
 
 async function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
