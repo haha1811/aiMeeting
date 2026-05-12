@@ -4,8 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
+import { LiveEventBus } from "../src/web/live-event-bus.js";
+import { LiveSessionJobRegistry } from "../src/web/live-session-jobs.js";
 import {
   checkAgentHealth,
+  createLiveSessionJob,
   deriveHealthUrl,
   getDefaultConfig,
   getSessionReplay,
@@ -66,6 +69,43 @@ test("runSessionFromWebRequest completes a mock-backed web session", async () =>
   assert.equal(replay.messages.length, 2);
   assert.equal(replay.actions.length, 1);
   assert.equal(replay.workspaceFiles[0]?.path, "docs/web.md");
+});
+
+test("createLiveSessionJob returns session id and events URL", async () => {
+  const rootDir = await mkdtemp(join(tmpdir(), "web-live-handler-sessions-"));
+  const workspaceRootDir = await mkdtemp(join(tmpdir(), "web-live-handler-workspaces-"));
+  const registry = new LiveSessionJobRegistry({
+    rootDir,
+    workspaceRootDir,
+    eventBus: new LiveEventBus(),
+    agentFactory: (agent) => ({
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      async respond() {
+        return { content: `${agent.id} ok` };
+      }
+    })
+  });
+
+  const response = await createLiveSessionJob({
+    registry,
+    request: {
+      topic: "web live",
+      maxRounds: 1,
+      enableExecution: false,
+      agents: [
+        { id: "a", name: "A", role: "planner", type: "http", url: "http://mock.local/a" },
+        { id: "b", name: "B", role: "builder", type: "http", url: "http://mock.local/b" }
+      ]
+    }
+  });
+
+  assert.equal(response.status, "queued");
+  assert.match(response.sessionId, /^[0-9a-f-]{36}$/);
+  assert.equal(response.eventsUrl, `/api/sessions/${response.sessionId}/events`);
+
+  await registry.waitForJob(response.sessionId);
 });
 
 test("listSessionSummaries returns completed web sessions", async () => {

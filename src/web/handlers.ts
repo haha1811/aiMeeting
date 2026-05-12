@@ -5,6 +5,8 @@ import { DiscussionService } from "../service.js";
 import type { DiscussionResult, HermesAgent, HttpHermesAgentConfig } from "../index.js";
 import { listSessions, readSessionReplay } from "./session-reader.js";
 import { validateAgentHealthCheckRequest, validateRunSessionRequest } from "./validation.js";
+import type { LiveSessionJobRegistry } from "./live-session-jobs.js";
+import type { WebCreateSessionJobResponse } from "./live-types.js";
 import type {
   WebAgentHealthCheckResponse,
   WebDefaultConfig,
@@ -22,6 +24,11 @@ export interface WebHandlerOptions {
 export interface RunSessionHandlerOptions extends WebHandlerOptions {
   request: unknown;
   agentFactory?: (agent: HttpHermesAgentConfig) => HermesAgent;
+}
+
+export interface CreateLiveSessionJobOptions {
+  registry: LiveSessionJobRegistry;
+  request: unknown;
 }
 
 export async function getDefaultConfig(configPath = "hermes-agents.real-execution.config.json"): Promise<WebDefaultConfig> {
@@ -77,6 +84,17 @@ export async function runSessionFromWebRequest(options: RunSessionHandlerOptions
   const result = await service.runSession(session.sessionId);
 
   return summarizeRunResult(request, result);
+}
+
+export async function createLiveSessionJob(
+  options: CreateLiveSessionJobOptions
+): Promise<WebCreateSessionJobResponse> {
+  const job = await options.registry.createJob(options.request);
+  return {
+    sessionId: job.sessionId,
+    status: job.status,
+    eventsUrl: `/api/sessions/${job.sessionId}/events`
+  };
 }
 
 export function summarizeRunResult(

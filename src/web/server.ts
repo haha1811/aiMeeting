@@ -2,21 +2,36 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
+import { createHermesAgentFromConfig } from "../adapters.js";
+import type { HermesAgent, HttpHermesAgentConfig } from "../index.js";
 import {
   checkAgentHealth,
+  createLiveSessionJob,
   getDefaultConfig,
   getSessionReplay,
   listSessionSummaries,
   runSessionFromWebRequest
 } from "./handlers.js";
+import { LiveEventBus } from "./live-event-bus.js";
+import { LiveSessionJobRegistry } from "./live-session-jobs.js";
+import { writeSseEvent, writeSseHeaders } from "./sse.js";
 
 export interface WebServerOptions {
   rootDir: string;
   workspaceRootDir: string;
   publicDir: string;
+  agentFactory?: (agent: HttpHermesAgentConfig) => HermesAgent;
 }
 
 export function createWebServer(options: WebServerOptions): http.Server {
+  const eventBus = new LiveEventBus();
+  const liveJobs = new LiveSessionJobRegistry({
+    rootDir: options.rootDir,
+    workspaceRootDir: options.workspaceRootDir,
+    eventBus,
+    agentFactory: options.agentFactory ?? createHermesAgentFromConfig
+  });
+
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
@@ -42,6 +57,16 @@ export function createWebServer(options: WebServerOptions): http.Server {
         await sendJson(res, 200, await runSessionFromWebRequest({
           rootDir: options.rootDir,
           workspaceRootDir: options.workspaceRootDir,
+          request: body,
+          agentFactory: options.agentFactory
+        }));
+        return;
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/sessions/jobs") {
+        const body = await readJsonBody(req);
+        await sendJson(res, 200, await createLiveSessionJob({
+          registry: liveJobs,
           request: body
         }));
         return;
@@ -54,6 +79,16 @@ export function createWebServer(options: WebServerOptions): http.Server {
           workspaceRootDir: options.workspaceRootDir,
           sessionId: replayMatch[1]
         }));
+        return;
+      }
+
+      const eventsMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/events$/);
+      if (req.method === "GET" && eventsMatch?.[1]) {
+        writeSseHeaders(res);
+        const unsubscribe = eventBus.subscribe(eventsMatch[1], (event) => {
+          writeSseEvent(res, event);
+        });
+        req.on("close", unsubscribe);
         return;
       }
 

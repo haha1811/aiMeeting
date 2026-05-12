@@ -72,3 +72,101 @@ test("web server checks agent health through runner", async () => {
     await new Promise<void>((resolve) => agentServer.close(() => resolve()));
   }
 });
+
+test("web server creates live session jobs", async () => {
+  const rootDir = await mkdtemp(join(tmpdir(), "web-live-server-sessions-"));
+  const workspaceRootDir = await mkdtemp(join(tmpdir(), "web-live-server-workspaces-"));
+  const server = createWebServer({
+    rootDir,
+    workspaceRootDir,
+    publicDir: "public",
+    agentFactory: (agent) => ({
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      async respond() {
+        return { content: `${agent.id} live` };
+      }
+    })
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/sessions/jobs`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        topic: "server live",
+        maxRounds: 1,
+        enableExecution: false,
+        agents: [
+          { id: "a", name: "A", role: "planner", type: "http", url: "http://mock.local/a" },
+          { id: "b", name: "B", role: "builder", type: "http", url: "http://mock.local/b" }
+        ]
+      })
+    });
+    const body = await response.json() as { sessionId: string; status: string; eventsUrl: string };
+
+    assert.equal(response.status, 200);
+    assert.equal(body.status, "queued");
+    assert.equal(body.eventsUrl, `/api/sessions/${body.sessionId}/events`);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+test("web server streams live events for a session", async () => {
+  const rootDir = await mkdtemp(join(tmpdir(), "web-live-sse-sessions-"));
+  const workspaceRootDir = await mkdtemp(join(tmpdir(), "web-live-sse-workspaces-"));
+  const server = createWebServer({
+    rootDir,
+    workspaceRootDir,
+    publicDir: "public",
+    agentFactory: (agent) => ({
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      async respond() {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return { content: `${agent.id} live` };
+      }
+    })
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+
+  try {
+    const jobResponse = await fetch(`http://127.0.0.1:${port}/api/sessions/jobs`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        topic: "server sse",
+        maxRounds: 1,
+        enableExecution: false,
+        agents: [
+          { id: "a", name: "A", role: "planner", type: "http", url: "http://mock.local/a" },
+          { id: "b", name: "B", role: "builder", type: "http", url: "http://mock.local/b" }
+        ]
+      })
+    });
+    const job = await jobResponse.json() as { eventsUrl: string };
+    const eventResponse = await fetch(`http://127.0.0.1:${port}${job.eventsUrl}`);
+    const reader = eventResponse.body?.getReader();
+
+    assert.equal(eventResponse.status, 200);
+    assert.match(eventResponse.headers.get("content-type") ?? "", /text\/event-stream/);
+    assert.ok(reader);
+
+    const chunk = await reader.read();
+    const text = new TextDecoder().decode(chunk.value);
+    await reader.cancel();
+
+    assert.match(text, /event: /);
+    assert.match(text, /data: /);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
