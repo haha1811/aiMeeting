@@ -1,6 +1,8 @@
 const state = {
   defaultConfig: undefined,
-  selectedSessionId: undefined
+  selectedSessionId: undefined,
+  liveSource: undefined,
+  liveEventCount: 0
 };
 
 const $ = (id) => document.getElementById(id);
@@ -75,7 +77,7 @@ function setEndpointHealth(element, status, text, title = "") {
 
 async function runSession(event) {
   event.preventDefault();
-  setStatus("Running session...", "running");
+  setStatus("Creating live session...", "running");
   $("runButton").disabled = true;
 
   try {
@@ -102,14 +104,18 @@ async function runSession(event) {
         }
       ]
     };
-    const result = await fetchJson("/api/sessions/run", {
+    closeLiveSource();
+    resetLiveView();
+    const result = await fetchJson("/api/sessions/jobs", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(request)
     });
-    setStatus(`Completed session ${result.sessionId}`, "completed");
+    state.selectedSessionId = result.sessionId;
+    setLiveStatus(result.status);
+    setStatus(`Running session ${result.sessionId}`, "running");
     await loadSessions();
-    await loadReplay(result.sessionId);
+    connectLiveEvents(result.sessionId, result.eventsUrl);
   } catch (error) {
     setStatus(error.message, "failed");
   } finally {
@@ -136,6 +142,7 @@ function renderSessionList(sessions) {
 }
 
 async function loadReplay(sessionId) {
+  closeLiveSource();
   state.selectedSessionId = sessionId;
   const replay = await fetchJson(`/api/sessions/${encodeURIComponent(sessionId)}`);
   renderSummary(replay);
@@ -145,6 +152,114 @@ async function loadReplay(sessionId) {
   document.querySelectorAll("[data-session-id]").forEach((button) => {
     button.classList.toggle("selected", button.dataset.sessionId === sessionId);
   });
+}
+
+function connectLiveEvents(sessionId, eventsUrl) {
+  closeLiveSource();
+  const source = new EventSource(eventsUrl);
+  state.liveSource = source;
+
+  const handle = (event) => {
+    const payload = JSON.parse(event.data);
+    state.liveEventCount += 1;
+    $("liveEventCount").textContent = String(state.liveEventCount);
+    handleLiveEvent(sessionId, payload);
+  };
+
+  [
+    "session.queued",
+    "session.started",
+    "speaker.active",
+    "message.appended",
+    "action.created",
+    "execution.result",
+    "session.completed",
+    "session.failed"
+  ].forEach((eventType) => {
+    source.addEventListener(eventType, handle);
+  });
+
+  source.onerror = () => {
+    setStatus("Live event connection interrupted.", "failed");
+  };
+}
+
+function handleLiveEvent(sessionId, event) {
+  if (sessionId !== state.selectedSessionId) {
+    return;
+  }
+
+  if (event.type === "session.started") {
+    setLiveStatus("running");
+    setStatus(`Running session ${sessionId}`, "running");
+    return;
+  }
+
+  if (event.type === "speaker.active") {
+    const speaker = event.data;
+    $("activeSpeaker").textContent = `${speaker.agentName ?? speaker.agentId} (${speaker.role ?? "agent"})`;
+    return;
+  }
+
+  if (event.type === "message.appended") {
+    appendLiveMessage(event.data.message);
+    return;
+  }
+
+  if (event.type === "execution.result") {
+    appendLiveExecutionResult(event.data.result);
+    return;
+  }
+
+  if (event.type === "session.completed") {
+    setLiveStatus("completed");
+    setStatus(`Completed session ${sessionId}`, "completed");
+    closeLiveSource();
+    loadSessions().then(() => loadReplay(sessionId)).catch((error) => setStatus(error.message, "failed"));
+    return;
+  }
+
+  if (event.type === "session.failed") {
+    setLiveStatus("failed");
+    setStatus(event.data.error ?? `Session ${sessionId} failed`, "failed");
+    closeLiveSource();
+  }
+}
+
+function appendLiveMessage(message) {
+  const container = $("timeline");
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = renderMessageCard(message);
+  container.appendChild(wrapper.firstElementChild);
+}
+
+function appendLiveExecutionResult(result) {
+  const container = $("execution");
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = renderExecutionResult(result);
+  container.appendChild(wrapper.firstElementChild);
+}
+
+function closeLiveSource() {
+  if (state.liveSource) {
+    state.liveSource.close();
+    state.liveSource = undefined;
+  }
+}
+
+function resetLiveView() {
+  state.liveEventCount = 0;
+  $("liveEventCount").textContent = "0";
+  $("activeSpeaker").textContent = "none";
+  setLiveStatus("queued");
+  $("timeline").innerHTML = "";
+  $("execution").innerHTML = "";
+  $("workspace-files").innerHTML = "";
+  $("summary").innerHTML = "";
+}
+
+function setLiveStatus(status) {
+  $("liveStatus").textContent = status;
 }
 
 function renderSummary(replay) {
@@ -166,24 +281,26 @@ function renderSummary(replay) {
 }
 
 function renderTimeline(replay) {
-  $("timeline").innerHTML = replay.messages.map((message) => {
-    const assignments = message.taskAssignments ?? [];
-    const actions = message.executionActions ?? [];
-    const results = message.executionResults ?? [];
-    return `
-      <article class="message-card ${escapeHtml(message.senderRole ?? "")}">
-        <header>
-          <strong>${escapeHtml(message.senderName)}</strong>
-          <span>${escapeHtml(message.senderRole ?? "agent")}</span>
-          <small>round ${message.round}</small>
-        </header>
-        <p>${escapeHtml(message.content)}</p>
-        ${renderMiniList("Assignments", assignments.map((item) => item.title))}
-        ${renderMiniList("Actions", actions.map((item) => `${item.type} ${item.path ?? item.command ?? ""}`))}
-        ${renderMiniList("Results", results.map((item) => `${item.status}: ${item.summary}`))}
-      </article>
-    `;
-  }).join("");
+  $("timeline").innerHTML = replay.messages.map(renderMessageCard).join("");
+}
+
+function renderMessageCard(message) {
+  const assignments = message.taskAssignments ?? [];
+  const actions = message.executionActions ?? [];
+  const results = message.executionResults ?? [];
+  return `
+    <article class="message-card ${escapeHtml(message.senderRole ?? "")}">
+      <header>
+        <strong>${escapeHtml(message.senderName)}</strong>
+        <span>${escapeHtml(message.senderRole ?? "agent")}</span>
+        <small>round ${message.round}</small>
+      </header>
+      <p>${escapeHtml(message.content)}</p>
+      ${renderMiniList("Assignments", assignments.map((item) => item.title))}
+      ${renderMiniList("Actions", actions.map((item) => `${item.type} ${item.path ?? item.command ?? ""}`))}
+      ${renderMiniList("Results", results.map((item) => `${item.status}: ${item.summary}`))}
+    </article>
+  `;
 }
 
 function renderExecution(replay) {
@@ -194,14 +311,18 @@ function renderExecution(replay) {
       <span>${succeeded} succeeded</span>
       <span>${failed} failed</span>
     </div>
-    ${replay.executionResults.map((result) => `
-      <article class="execution-result ${escapeHtml(result.status)}">
-        <strong>${escapeHtml(result.status)}</strong>
-        <p>${escapeHtml(result.summary)}</p>
-        ${result.outputPreview ? `<pre>${escapeHtml(result.outputPreview)}</pre>` : ""}
-        ${result.error ? `<pre>${escapeHtml(result.error)}</pre>` : ""}
-      </article>
-    `).join("")}
+    ${replay.executionResults.map(renderExecutionResult).join("")}
+  `;
+}
+
+function renderExecutionResult(result) {
+  return `
+    <article class="execution-result ${escapeHtml(result.status)}">
+      <strong>${escapeHtml(result.status)}</strong>
+      <p>${escapeHtml(result.summary)}</p>
+      ${result.outputPreview ? `<pre>${escapeHtml(result.outputPreview)}</pre>` : ""}
+      ${result.error ? `<pre>${escapeHtml(result.error)}</pre>` : ""}
+    </article>
   `;
 }
 

@@ -7,6 +7,7 @@ import type {
   AppendMessageInput,
   CreateSessionInput,
   DiscussionEvent,
+  DiscussionLifecycleHooks,
   DiscussionMessage,
   DiscussionResult,
   DiscussionSession,
@@ -23,6 +24,7 @@ export interface DiscussionServiceOptions {
   enableExecution?: boolean;
   now?: () => Date;
   idFactory?: () => string;
+  lifecycleHooks?: DiscussionLifecycleHooks;
 }
 
 export class DiscussionService {
@@ -31,12 +33,21 @@ export class DiscussionService {
   private readonly workspaceManager?: WorkspaceManager;
   private readonly now: () => Date;
   private readonly idFactory: () => string;
+  private readonly lifecycleHooks: DiscussionLifecycleHooks;
   private readonly agentsBySession = new Map<string, HermesAgent[]>();
 
   constructor(options: DiscussionServiceOptions = {}) {
+    if (options.moderator && options.lifecycleHooks) {
+      throw new Error(
+        "DiscussionService cannot combine a custom moderator with lifecycleHooks. " +
+          "Pass lifecycleHooks to the Moderator instead."
+      );
+    }
+
     this.store = options.store ?? new JsonlDiscussionStore(options.rootDir);
     this.now = options.now ?? (() => new Date());
     this.idFactory = options.idFactory ?? randomUUID;
+    this.lifecycleHooks = options.lifecycleHooks ?? {};
     this.workspaceManager = options.enableExecution ? new WorkspaceManager(options.workspaceRootDir) : undefined;
     this.moderator = options.moderator ?? new Moderator({
       now: this.now,
@@ -44,7 +55,8 @@ export class DiscussionService {
       executorFactory: (session) => session.workspace ? new Executor(session.workspace, {
         now: this.now,
         idFactory: this.idFactory
-      }) : undefined
+      }) : undefined,
+      lifecycleHooks: this.lifecycleHooks
     });
   }
 
@@ -114,13 +126,16 @@ export class DiscussionService {
         messageCount: result.messageCount,
         taskAssignmentCount: result.taskAssignments.length
       });
+      await this.notifyLifecycle(() => this.lifecycleHooks.onSessionCompleted?.(sessionId));
       return result;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       session.status = "failed";
-      session.error = error instanceof Error ? error.message : String(error);
+      session.error = errorMessage;
       session.updatedAt = this.timestamp();
       await this.store.writeSession(session);
-      await this.appendEvent(sessionId, "session.failed", { error: session.error });
+      await this.appendEvent(sessionId, "session.failed", { error: errorMessage });
+      await this.notifyLifecycle(() => this.lifecycleHooks.onSessionFailed?.({ sessionId, error: errorMessage }));
       throw error;
     }
   }
@@ -190,6 +205,14 @@ export class DiscussionService {
     };
     await this.store.appendEvent(event);
     return event;
+  }
+
+  private async notifyLifecycle(hook: (() => void | Promise<void>) | undefined): Promise<void> {
+    try {
+      await hook?.();
+    } catch {
+      // Lifecycle observers must not affect core session execution.
+    }
   }
 
   private timestamp(): string {

@@ -179,6 +179,32 @@ button.secondary { background: #e7ebf3; color: #243047; }
 .status-banner.completed { background: #dcf7e8; color: #17633a; }
 .status-banner.failed { background: #fde2e2; color: #8f1d1d; }
 
+.live-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.live-strip div {
+  background: #ffffff;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.live-strip span {
+  display: block;
+  color: #697386;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.live-strip strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(160px, 1fr));
@@ -304,6 +330,10 @@ pre {
   }
 
   .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .live-strip {
     grid-template-columns: 1fr;
   }
 }

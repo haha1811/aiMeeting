@@ -1,22 +1,39 @@
 #!/usr/bin/env node
+import { randomUUID } from "node:crypto";
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
+import { createHermesAgentFromConfig } from "../adapters.js";
+import type { HermesAgent, HttpHermesAgentConfig } from "../index.js";
 import {
   checkAgentHealth,
+  createLiveSessionJob,
   getDefaultConfig,
   getSessionReplay,
   listSessionSummaries,
   runSessionFromWebRequest
 } from "./handlers.js";
+import { LiveEventBus } from "./live-event-bus.js";
+import { LiveSessionJobRegistry } from "./live-session-jobs.js";
+import type { LiveSessionEvent, LiveSessionJob } from "./live-types.js";
+import { writeSseEvent, writeSseHeaders } from "./sse.js";
 
 export interface WebServerOptions {
   rootDir: string;
   workspaceRootDir: string;
   publicDir: string;
+  agentFactory?: (agent: HttpHermesAgentConfig) => HermesAgent;
 }
 
 export function createWebServer(options: WebServerOptions): http.Server {
+  const eventBus = new LiveEventBus();
+  const liveJobs = new LiveSessionJobRegistry({
+    rootDir: options.rootDir,
+    workspaceRootDir: options.workspaceRootDir,
+    eventBus,
+    agentFactory: options.agentFactory ?? createHermesAgentFromConfig
+  });
+
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
@@ -42,6 +59,16 @@ export function createWebServer(options: WebServerOptions): http.Server {
         await sendJson(res, 200, await runSessionFromWebRequest({
           rootDir: options.rootDir,
           workspaceRootDir: options.workspaceRootDir,
+          request: body,
+          agentFactory: options.agentFactory
+        }));
+        return;
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/sessions/jobs") {
+        const body = await readJsonBody(req);
+        await sendJson(res, 200, await createLiveSessionJob({
+          registry: liveJobs,
           request: body
         }));
         return;
@@ -57,6 +84,21 @@ export function createWebServer(options: WebServerOptions): http.Server {
         return;
       }
 
+      const eventsMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/events$/);
+      if (req.method === "GET" && eventsMatch?.[1]) {
+        const sessionId = eventsMatch[1];
+        writeSseHeaders(res);
+        const job = liveJobs.getJob(sessionId);
+        if (job) {
+          writeSseEvent(res, currentJobEvent(job));
+        }
+        const unsubscribe = eventBus.subscribe(sessionId, (event) => {
+          writeSseEvent(res, event);
+        });
+        req.on("close", unsubscribe);
+        return;
+      }
+
       if (req.method === "GET" || req.method === "HEAD") {
         await serveStatic(res, options.publicDir, url.pathname, req.method === "HEAD");
         return;
@@ -67,6 +109,25 @@ export function createWebServer(options: WebServerOptions): http.Server {
       await sendJson(res, 500, { error: error instanceof Error ? error.message : String(error) });
     }
   });
+}
+
+function currentJobEvent(job: LiveSessionJob): LiveSessionEvent {
+  const base = {
+    id: randomUUID(),
+    sessionId: job.sessionId,
+    createdAt: new Date().toISOString()
+  };
+
+  switch (job.status) {
+    case "queued":
+      return { ...base, type: "session.queued", data: { status: "queued" } };
+    case "running":
+      return { ...base, type: "session.started", data: { status: "running" } };
+    case "completed":
+      return { ...base, type: "session.completed", data: { status: "completed" } };
+    case "failed":
+      return { ...base, type: "session.failed", data: { error: job.error ?? "Session failed." } };
+  }
 }
 
 async function readJsonBody(req: http.IncomingMessage): Promise<unknown> {

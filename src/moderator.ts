@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type {
   AgentDiscussionContext,
+  DiscussionLifecycleHooks,
   DiscussionMessage,
   DiscussionResult,
   DiscussionSession,
@@ -16,17 +17,20 @@ export interface ModeratorOptions {
   now?: () => Date;
   idFactory?: () => string;
   executorFactory?: (session: DiscussionSession) => Executor | undefined;
+  lifecycleHooks?: DiscussionLifecycleHooks;
 }
 
 export class Moderator {
   private readonly now: () => Date;
   private readonly idFactory: () => string;
   private readonly executorFactory?: (session: DiscussionSession) => Executor | undefined;
+  private readonly lifecycleHooks: DiscussionLifecycleHooks;
 
   constructor(options: ModeratorOptions = {}) {
     this.now = options.now ?? (() => new Date());
     this.idFactory = options.idFactory ?? randomUUID;
     this.executorFactory = options.executorFactory;
+    this.lifecycleHooks = options.lifecycleHooks ?? {};
   }
 
   async run(
@@ -41,9 +45,17 @@ export class Moderator {
     session.status = "running";
     session.updatedAt = this.timestamp();
     await persistSession(session);
+    await this.notifyLifecycle(() => this.lifecycleHooks.onSessionStarted?.(session.sessionId));
 
     for (let round = 1; round <= session.maxRounds; round += 1) {
       for (const agent of agents) {
+        await this.notifyLifecycle(() => this.lifecycleHooks.onSpeakerActive?.({
+          sessionId: session.sessionId,
+          agentId: agent.id,
+          agentName: agent.name,
+          role: agent.role,
+          round
+        }));
         const response = await agent.respond(this.createContext(session, agent, round));
         const message = this.createMessage(session, agent, round, response.content, response.taskAssignments);
         const executor = this.executorFactory?.(session);
@@ -57,6 +69,10 @@ export class Moderator {
 
         for (const action of actions) {
           await appendAction?.(action);
+          await this.notifyLifecycle(() => this.lifecycleHooks.onActionCreated?.({
+            sessionId: session.sessionId,
+            action: this.snapshot(action)
+          }));
           if (!executor) {
             continue;
           }
@@ -64,6 +80,10 @@ export class Moderator {
           executionResults.push(result);
           session.executionResults.push(result);
           await appendExecutionResult?.(result);
+          await this.notifyLifecycle(() => this.lifecycleHooks.onExecutionResult?.({
+            sessionId: session.sessionId,
+            result: this.snapshot(result)
+          }));
         }
 
         message.executionActions = actions;
@@ -73,6 +93,7 @@ export class Moderator {
         session.updatedAt = message.createdAt;
         await appendMessage(message);
         await persistSession(session);
+        await this.notifyLifecycle(() => this.lifecycleHooks.onMessageAppended?.(this.snapshot(message)));
 
         if (this.hasEnoughAssignments(session)) {
           return this.complete(session, round, persistSession);
@@ -197,6 +218,18 @@ export class Moderator {
       );
 
     return [...session.taskAssignments, ...generated];
+  }
+
+  private async notifyLifecycle(hook: (() => void | Promise<void>) | undefined): Promise<void> {
+    try {
+      await hook?.();
+    } catch {
+      // Lifecycle observers must not affect core session execution.
+    }
+  }
+
+  private snapshot<T>(value: T): T {
+    return structuredClone(value);
   }
 
   private timestamp(): string {

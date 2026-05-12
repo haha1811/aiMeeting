@@ -19,6 +19,7 @@ export type {
   AppendMessageInput,
   CreateSessionInput,
   DiscussionEvent,
+  DiscussionLifecycleHooks,
   DiscussionMessage,
   DiscussionResult,
   DiscussionSession,
