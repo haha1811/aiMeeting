@@ -6,6 +6,7 @@ A small TypeScript/Node core for running two or more in-process Hermes agents in
 
 - `v0.1.0`: CLI discussion runner, JSONL persistence, and real Hermes execution MVP.
 - `v0.2.0`: Web Runner Console replay MVP.
+- `v0.3.0`: Web Runner Console live monitor with background jobs and SSE updates.
 
 ## Install
 
@@ -138,6 +139,10 @@ See [docs/PHASE_3A_WEB_RUNNER_CONSOLE_RUNBOOK.md](docs/PHASE_3A_WEB_RUNNER_CONSO
 ## Phase 3A Web Runner Console User Guide
 
 See [docs/PHASE_3A_WEB_RUNNER_CONSOLE_USER_GUIDE.md](docs/PHASE_3A_WEB_RUNNER_CONSOLE_USER_GUIDE.md) for a user-facing guide to running sessions and reading replay results in the browser.
+
+## Phase 3B Live Monitor Runbook
+
+See [docs/PHASE_3B_LIVE_MONITOR_RUNBOOK.md](docs/PHASE_3B_LIVE_MONITOR_RUNBOOK.md) for live monitoring setup and browser validation steps.
 
 ## Hermes Agent Guide
 

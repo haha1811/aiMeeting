@@ -458,3 +458,16 @@ Live Monitor
 - 新 action 即時出現
 - execution result 即時更新
 - runner 目前正在呼叫哪個 agent 可以被看見
+
+# Phase 3B Live Monitor
+
+Phase 3B adds live monitoring to the Web Runner Console.
+
+When you click `Run Session`, the browser now creates a background runner job and subscribes to live updates. During execution, the page shows:
+
+- live session status
+- active speaker
+- planner / builder messages as they arrive
+- execution results as they complete
+
+After completion, the page still loads the persisted replay from `sessions/<sessionId>/*`.

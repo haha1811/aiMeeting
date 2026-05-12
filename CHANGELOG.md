@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.0 - Phase 3B Live Monitor
+
+Released: 2026-05-11
+
+### Added
+
+- Added background Web session jobs through `POST /api/sessions/jobs`.
+- Added Server-Sent Events live stream through `GET /api/sessions/:sessionId/events`.
+- Added live Web UI updates for active speaker, messages, and execution results.
+- Added live job registry and in-memory event bus.
+
+### Preserved
+
+- Phase 3A replay APIs remain available.
+- Synchronous `POST /api/sessions/run` remains available for compatibility.
+
 ## v0.2.1 - Phase 3A.1 Web Console Usability
 
 Released: 2026-05-11
