@@ -425,6 +425,39 @@ Rules:
 - `detail` should be specific enough for execution.
 - `dependencies`, `confidence`, and `rationale` are optional.
 
+## Runner Workspace Ownership
+
+All file outputs are created and verified on the runner, not on the Hermes agent host.
+
+```text
+Hermes agent
+  -> returns actions JSON
+  -> runner executes actions
+  -> runner writes workspaces/<sessionId>/repo
+```
+
+Hermes A and Hermes B should not inspect their local filesystem to validate generated files. Their local EC2 instances only run the wrapper and Hermes CLI. They do not contain the runner workspace.
+
+If an agent needs to create or inspect files, it must return actions:
+
+```json
+{
+  "actions": [
+    {
+      "type": "read_file",
+      "path": "docs/web-mvp-plan.md"
+    },
+    {
+      "type": "run_command",
+      "command": "ls",
+      "args": ["docs"]
+    }
+  ]
+}
+```
+
+The next turn receives runner execution output through `executionResults`. Agents should use `executionResults` to decide whether the file exists, whether a command succeeded, and what follow-up action is needed.
+
 ## Running a Session
 
 Minimal example:

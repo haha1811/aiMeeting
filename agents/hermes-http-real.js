@@ -178,6 +178,13 @@ ${executionResults}
 可用 workspace：
 ${workspace}
 
+workspace 與檔案規則：
+- 產出檔案都由 runner 在 runner EC2 的 workspace 內建立與修改，不在 ${agentName} 這台 agent 本機。
+- 不要嘗試在 agent 本機檔案系統檢查產物，因為 planner / builder 本機不會有 runner workspace 的檔案。
+- 如果需要建立、讀取、列出或驗證檔案，請回傳 actions，讓 runner 在 workspace 內執行。
+- 如果需要檢查產出檔，請使用 read_file 或 run_command action，例如 run_command action 執行 ls、cat、pwd。
+- 判斷前一輪檔案操作是否成功時，請依據目前執行結果 executionResults，不要假設本機檔案存在。
+
 你正在參與一個 moderated meeting-room discussion。請根據你的角色回覆。
 
 請務必只輸出一個 JSON object，不要使用 markdown code block，不要輸出 JSON 以外的文字。
@@ -225,6 +232,7 @@ actions 只能使用以下型別：
 - path 必須是相對路徑，不可使用絕對路徑或 ..
 - run_command 僅使用簡單 allowlisted command，例如 ls、cat、pwd、mkdir、node、npm、git
 - 如果你是 builder，而且 workspace 還沒有 docs/web-mvp-plan.md，請優先回傳 mkdir、write_file、run_command actions 來建立並驗證它。
+- 如果你是 planner 並且需要驗收產出，請回傳 read_file 或 run_command actions 讓 runner 檢查 workspace，不要在 planner 本機檢查。
 - 如果你看到 executionResults 已成功，請根據結果做下一輪協作，不要重複相同 action。
 `;
 }

@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.3.2 - Runner Workspace Prompt Hardening
+
+Released: 2026-05-13
+
+### Changed
+
+- Updated the real Hermes wrapper prompt to state that generated files live in the runner workspace, not on planner or builder hosts.
+- Instructed planner and builder agents to use `read_file` or `run_command` actions for workspace verification.
+- Documented runner workspace ownership in the Hermes agent guide and Phase 4 validation docs.
+
+### Added
+
+- Added a regression test for the real Hermes wrapper prompt workspace instructions.
+
 ## v0.3.1 - Phase 4 EC2 Validation Runbook
 
 Released: 2026-05-13

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Validate `v0.3.0` on three real EC2 instances:
+Validate `v0.3.2` on three real EC2 instances:
 
 - runner
 - hermes-a
@@ -27,7 +27,7 @@ cd ~/projects/aiMeeting
 git fetch origin
 git checkout main
 git pull
-git checkout v0.3.0
+git checkout v0.3.2
 npm install
 npm test
 ```
@@ -53,7 +53,7 @@ On hermes-a:
 ```bash
 cd ~/projects/aiMeeting
 git fetch origin
-git checkout v0.3.0
+git checkout v0.3.2
 git restore agents/hermes-http-real.js
 git status --short
 grep -n "health" agents/hermes-http-real.js
@@ -104,7 +104,7 @@ On hermes-b:
 ```bash
 cd ~/projects/aiMeeting
 git fetch origin
-git checkout v0.3.0
+git checkout v0.3.2
 git restore agents/hermes-http-real.js
 git status --short
 grep -n "health" agents/hermes-http-real.js
@@ -167,7 +167,7 @@ If `/respond` works but `/health` returns `{"error":"not found"}`, the EC2 insta
 
 ```bash
 cd ~/projects/aiMeeting
-git checkout v0.3.0
+git checkout v0.3.2
 git restore agents/hermes-http-real.js
 grep -n "health" agents/hermes-http-real.js
 ```
@@ -269,6 +269,14 @@ After completion, confirm:
 
 ## Step 10: Verify Durable Files on Runner
 
+All generated files are expected on runner, not on hermes-a or hermes-b.
+
+Planner and builder validate files by returning `read_file` or `run_command` actions. The runner executes those actions inside:
+
+```text
+workspaces/<sessionId>/repo
+```
+
 On runner, using the observed session id:
 
 ```bash
@@ -314,6 +322,6 @@ docs/step_15_phase_4_real_ec2_live_validation_2026_05_12.md
 
 After validation:
 
-- If all checks pass and no code changes are needed, keep `v0.3.0`.
-- If small usability fixes are needed, plan `v0.3.1`.
+- If all checks pass and no code changes are needed, keep `v0.3.2`.
+- If small usability fixes are needed, plan a later patch release.
 - If recovery semantics or APIs need major changes, plan `v0.4.0`.

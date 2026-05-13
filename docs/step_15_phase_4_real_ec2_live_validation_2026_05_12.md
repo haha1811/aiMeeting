@@ -11,7 +11,7 @@
 Repository version:
 
 ```text
-v0.3.0
+v0.3.2
 ```
 
 ## Runner Preparation
@@ -23,7 +23,7 @@ cd ~/projects/aiMeeting
 git fetch origin
 git checkout main
 git pull
-git checkout v0.3.0
+git checkout v0.3.2
 npm install
 npm test
 HOST=0.0.0.0 PORT=3000 npm run web
@@ -142,6 +142,8 @@ Observed live event count:
 
 ## Durable File Verification
 
+Generated files should be checked on runner only. Hermes A and Hermes B do not have the runner workspace locally.
+
 Commands:
 
 ```bash
@@ -183,7 +185,7 @@ Allowed categories:
 
 ## Hardening Notes
 
-Record any candidate `v0.3.1` fixes:
+Record any candidate follow-up patch fixes:
 
 ```text
 

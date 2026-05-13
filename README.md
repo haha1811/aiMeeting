@@ -7,6 +7,7 @@ A small TypeScript/Node core for running two or more in-process Hermes agents in
 - `v0.1.0`: CLI discussion runner, JSONL persistence, and real Hermes execution MVP.
 - `v0.2.0`: Web Runner Console replay MVP.
 - `v0.3.0`: Web Runner Console live monitor with background jobs and SSE updates.
+- `v0.3.2`: Runner workspace prompt hardening for real Hermes agents.
 
 ## Install
 
