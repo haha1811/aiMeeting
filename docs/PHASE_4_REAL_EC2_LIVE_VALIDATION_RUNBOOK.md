@@ -54,10 +54,34 @@ On hermes-a:
 cd ~/projects/aiMeeting
 git fetch origin
 git checkout v0.3.0
+git restore agents/hermes-http-real.js
+git status --short
+grep -n "health" agents/hermes-http-real.js
 npm install
 ```
 
-Start or restart Hermes A wrapper using the existing wrapper command for this environment.
+Expected before starting the wrapper:
+
+```text
+grep output includes the /health route
+git status does not show agents/hermes-http-real.js as modified
+```
+
+Start or restart Hermes A wrapper:
+
+```bash
+PORT=4101 \
+AGENT_ID=hermes-a \
+AGENT_NAME="Hermes A" \
+AGENT_ROLE="planner" \
+node agents/hermes-http-real.js
+```
+
+Expected startup output includes:
+
+```text
+real-hermes-wrapper-action-json-v3
+```
 
 Verify locally:
 
@@ -81,10 +105,34 @@ On hermes-b:
 cd ~/projects/aiMeeting
 git fetch origin
 git checkout v0.3.0
+git restore agents/hermes-http-real.js
+git status --short
+grep -n "health" agents/hermes-http-real.js
 npm install
 ```
 
-Start or restart Hermes B wrapper using the existing wrapper command for this environment.
+Expected before starting the wrapper:
+
+```text
+grep output includes the /health route
+git status does not show agents/hermes-http-real.js as modified
+```
+
+Start or restart Hermes B wrapper:
+
+```bash
+PORT=4102 \
+AGENT_ID=hermes-b \
+AGENT_NAME="Hermes B" \
+AGENT_ROLE="builder" \
+node agents/hermes-http-real.js
+```
+
+Expected startup output includes:
+
+```text
+real-hermes-wrapper-action-json-v3
+```
 
 Verify locally:
 
@@ -114,6 +162,17 @@ Expected:
 ```
 
 If either request fails, fix network, security group, wrapper process, or port binding before continuing.
+
+If `/respond` works but `/health` returns `{"error":"not found"}`, the EC2 instance is likely running a locally modified wrapper. Run this on the affected Hermes host:
+
+```bash
+cd ~/projects/aiMeeting
+git checkout v0.3.0
+git restore agents/hermes-http-real.js
+grep -n "health" agents/hermes-http-real.js
+```
+
+Then restart the wrapper and retry `/health`.
 
 ## Step 5: Open Web Console
 

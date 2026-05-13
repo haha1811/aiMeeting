@@ -37,6 +37,19 @@ Result:
 
 ## Hermes A Preparation
 
+Wrapper file check:
+
+```bash
+git status --short
+grep -n "health" agents/hermes-http-real.js
+```
+
+Result:
+
+```text
+
+```
+
 Health check:
 
 ```bash
@@ -50,6 +63,19 @@ Result:
 ```
 
 ## Hermes B Preparation
+
+Wrapper file check:
+
+```bash
+git status --short
+grep -n "health" agents/hermes-http-real.js
+```
+
+Result:
+
+```text
+
+```
 
 Health check:
 
