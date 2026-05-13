@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.3.1 - Phase 4 EC2 Validation Runbook
+
+Released: 2026-05-13
+
+### Added
+
+- Added Phase 4 real EC2 Live Monitor validation design.
+- Added Phase 4 three-EC2 validation runbook.
+- Added Phase 4 validation record template.
+
+### Changed
+
+- Documented the required `agents/hermes-http-real.js` restore step before starting Hermes A and Hermes B wrappers.
+- Documented `/health` verification to prevent running a locally modified wrapper without health-check support.
+
 ## v0.3.0 - Phase 3B Live Monitor
 
 Released: 2026-05-11
