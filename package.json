@@ -1,6 +1,6 @@
 {
   "name": "multi-hermes-discussion",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "Standalone TypeScript core for moderated multi-Hermes agent discussions.",
   "type": "module",
   "main": "dist/src/index.js",
