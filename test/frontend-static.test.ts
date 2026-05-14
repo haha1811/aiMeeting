@@ -23,3 +23,14 @@ test("frontend keeps live APIs and adds timeline collapse helpers", async () => 
   assert.match(css, /message-content\.collapsed/);
   assert.match(css, /message-card-actions/);
 });
+
+test("frontend displays session timestamps in Taiwan time", async () => {
+  const app = await readFile("public/app.js", "utf8");
+  const html = await readFile("public/index.html", "utf8");
+
+  assert.match(app, /function formatSessionTime/);
+  assert.match(app, /timeZone:\s*"Asia\/Taipei"/);
+  assert.match(app, /UTC:\s*\$\{escapeAttribute\(session\.updatedAt\)\}/);
+  assert.match(app, /formatSessionTime\(session\.updatedAt\)/);
+  assert.match(html, /Asia\/Taipei \(UTC\+08:00\)/);
+});
