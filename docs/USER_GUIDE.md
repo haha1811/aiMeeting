@@ -559,17 +559,44 @@ npm run session
 請閱讀 docs/HERMES_AGENT_GUIDE.md，依照你的執行型態修改 hermes-agents.config.json，然後執行 npm test 與 npm run session。
 ```
 
-## 11. 常見問題
+## 11. Agent Visual Workbench
 
-### 11.1 Hermes agents 會直接彼此呼叫嗎？
+Web Runner Console 包含 `Workbench` 視圖，可以不用閱讀完整 timeline，也能快速看出 session 目前工作狀態。
+
+適合用來快速確認：
+
+- Runner 是否仍在協調 session。
+- 哪個 Hermes agent 目前正在工作。
+- Planner 或 Builder 是否剛完成回覆。
+- Agent 是否正在執行 action。
+- Session 最後是完成或失敗。
+
+操作步驟：
+
+1. 啟動 Web Runner Console：
+
+```bash
+npm run web
+```
+
+2. 用瀏覽器開啟 runner console。
+3. 執行一場 session，或從 `Sessions` 選擇既有 session。
+4. 點選 `Timeline` 旁邊的 `Workbench`。
+5. 查看 Runner、Planner、Builder 的狀態卡片。
+
+Workbench 是同一份 session records 與 live events 的視覺投影。它不會改變 Hermes 行為，也不會額外寫入 workspace 檔案。
+
+## 12. 常見問題
+
+### 12.1 Hermes agents 會直接彼此呼叫嗎？
 
 v1 不會。它們透過 moderator 傳遞 context。這樣比較容易追蹤、保存與除錯。
 
-### 11.2 可以超過兩台 Hermes 嗎？
+### 12.2 可以超過兩台 Hermes 嗎？
 
 可以。只要在 `agents` 陣列中加入更多 agent 即可。Moderator 會依陣列順序輪流呼叫。
 
-### 11.3 討論紀錄在哪裡？
+### 12.3 討論紀錄在哪裡？
 
 在：
 
@@ -584,7 +611,7 @@ result.json
 messages.jsonl
 ```
 
-### 11.4 真實 Hermes 不會回 JSON 怎麼辦？
+### 12.4 真實 Hermes 不會回 JSON 怎麼辦？
 
 如果 command 或 http adapter 回純文字，系統會把它當成：
 
@@ -594,7 +621,7 @@ messages.jsonl
 
 但如果你想產生任務分派，建議讓 Hermes 回傳完整 `AgentResponse` JSON。
 
-### 11.5 我該先讀哪份文件？
+### 12.5 我該先讀哪份文件？
 
 使用者先讀：
 
