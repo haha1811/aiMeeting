@@ -65,4 +65,38 @@ export interface WebSessionReplay {
   workspaceFiles: WebWorkspaceFile[];
 }
 
+export type AgentVisualStatus =
+  | "idle"
+  | "thinking"
+  | "speaking"
+  | "executing"
+  | "reviewing"
+  | "completed"
+  | "failed";
+
+export interface AgentVisualState {
+  agentId: string;
+  name: string;
+  role?: string;
+  status: AgentVisualStatus;
+  currentActivity: string;
+  lastMessagePreview?: string;
+  lastActionSummary?: string;
+  lastExecutionSummary?: string;
+  updatedAt: string;
+}
+
+export interface RunnerVisualState {
+  status: "idle" | "queued" | "running" | "completed" | "failed";
+  currentActivity: string;
+  updatedAt?: string;
+}
+
+export interface VisualWorkbenchState {
+  sessionId: string;
+  topic: string;
+  runner: RunnerVisualState;
+  agents: AgentVisualState[];
+}
+
 export type WebDefaultConfig = DiscussionRunnerConfig;
