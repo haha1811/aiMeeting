@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.4 - Taiwan Session Time Display
+
+Released: 2026-05-14
+
+### Added
+
+- Added an `Asia/Taipei (UTC+08:00)` timezone note to the Sessions section.
+- Added frontend timestamp formatting for session updated times in Taiwan local time.
+
+### Changed
+
+- Session timestamps now keep the original UTC value in hover text while displaying Taiwan local time in the list.
+
 ## v0.3.3 - Timeline Usability
 
 Released: 2026-05-14
