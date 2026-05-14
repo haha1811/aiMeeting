@@ -122,6 +122,8 @@ async function runSession(event) {
       body: JSON.stringify(request)
     });
     state.selectedSessionId = result.sessionId;
+    state.workbench = createFrontendLiveWorkbenchState(result.sessionId, request);
+    renderWorkbench();
     setLiveStatus(result.status);
     setStatus(`Running session ${result.sessionId}`, "running");
     await loadSessions();
@@ -217,6 +219,11 @@ function connectLiveEvents(sessionId, eventsUrl) {
 function handleLiveEvent(sessionId, event) {
   if (sessionId !== state.selectedSessionId) {
     return;
+  }
+
+  if (state.workbench) {
+    state.workbench = applyFrontendVisualEvent(state.workbench, event);
+    renderWorkbench();
   }
 
   if (event.type === "session.started") {
@@ -372,12 +379,7 @@ function renderMessageCard(message) {
 }
 
 function getMessagePreview(content) {
-  const normalized = String(content ?? "");
-  const maxLength = 520;
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-  return `${normalized.slice(0, maxLength).trimEnd()}...`;
+  return getShortPreview(content, 520);
 }
 
 function renderCountBadge(label, count) {
@@ -459,7 +461,156 @@ function createFrontendLiveWorkbenchState(sessionId, request) {
 }
 
 function applyFrontendVisualEvent(workbench, event) {
-  return workbench;
+  switch (event.type) {
+    case "session.queued":
+      return {
+        ...workbench,
+        runner: { status: "queued", currentActivity: "Session queued", updatedAt: event.createdAt }
+      };
+    case "session.started":
+      return {
+        ...workbench,
+        runner: { status: "running", currentActivity: "Coordinating session", updatedAt: event.createdAt },
+        agents: workbench.agents.map((agent) => terminalVisualAgent(agent) ? agent : {
+          ...agent,
+          status: "idle",
+          currentActivity: "Waiting for turn",
+          updatedAt: event.createdAt
+        })
+      };
+    case "speaker.active":
+      return {
+        ...workbench,
+        runner: {
+          status: "running",
+          currentActivity: `${event.data.agentName ?? event.data.agentId} is active`,
+          updatedAt: event.createdAt
+        },
+        agents: workbench.agents.map((agent) => {
+          if (agent.agentId === event.data.agentId) {
+            return {
+              ...agent,
+              name: event.data.agentName ?? agent.name,
+              role: event.data.role ?? agent.role,
+              status: "thinking",
+              currentActivity: `Round ${event.data.round}: preparing response`,
+              updatedAt: event.createdAt
+            };
+          }
+          return terminalVisualAgent(agent) ? agent : {
+            ...agent,
+            status: "idle",
+            currentActivity: "Waiting for turn",
+            updatedAt: event.createdAt
+          };
+        })
+      };
+    case "message.appended":
+      return applyFrontendMessage(workbench, event.data.message, event.createdAt);
+    case "action.created":
+      return applyFrontendAction(workbench, event.data.action, event.createdAt);
+    case "execution.result":
+      return applyFrontendExecutionResult(workbench, event.data.result, event.createdAt);
+    case "session.completed":
+      return {
+        ...workbench,
+        runner: { status: "completed", currentActivity: "Session completed", updatedAt: event.createdAt },
+        agents: workbench.agents.map((agent) => agent.status === "failed" ? agent : {
+          ...agent,
+          status: "completed",
+          currentActivity: "Session completed",
+          updatedAt: event.createdAt
+        })
+      };
+    case "session.failed":
+      return {
+        ...workbench,
+        runner: { status: "failed", currentActivity: event.data.error ?? "Session failed", updatedAt: event.createdAt },
+        agents: workbench.agents.map((agent) => agent.status === "completed" ? agent : {
+          ...agent,
+          status: "failed",
+          currentActivity: event.data.error ?? "Session failed",
+          updatedAt: event.createdAt
+        })
+      };
+    default:
+      return workbench;
+  }
+}
+
+function applyFrontendMessage(workbench, message, updatedAt) {
+  return {
+    ...workbench,
+    runner: {
+      status: workbench.runner.status === "queued" ? "running" : workbench.runner.status,
+      currentActivity: `${message.senderName} responded`,
+      updatedAt
+    },
+    agents: workbench.agents.map((agent) => agent.agentId === message.senderId ? {
+      ...agent,
+      name: message.senderName,
+      role: message.senderRole ?? agent.role,
+      status: "speaking",
+      currentActivity: `Round ${message.round}: shared response`,
+      lastMessagePreview: getShortPreview(message.content, 180),
+      updatedAt
+    } : agent)
+  };
+}
+
+function applyFrontendAction(workbench, action, updatedAt) {
+  return {
+    ...workbench,
+    runner: {
+      status: workbench.runner.status === "queued" ? "running" : workbench.runner.status,
+      currentActivity: `${action.agentId} created action`,
+      updatedAt
+    },
+    agents: workbench.agents.map((agent) => agent.agentId === action.agentId ? {
+      ...agent,
+      status: "executing",
+      currentActivity: "Executing workspace action",
+      lastActionSummary: summarizeFrontendAction(action),
+      updatedAt
+    } : agent)
+  };
+}
+
+function applyFrontendExecutionResult(workbench, result, updatedAt) {
+  return {
+    ...workbench,
+    runner: {
+      status: workbench.runner.status === "queued" ? "running" : workbench.runner.status,
+      currentActivity: `${result.agentId} execution ${result.status}`,
+      updatedAt
+    },
+    agents: workbench.agents.map((agent) => agent.agentId === result.agentId ? {
+      ...agent,
+      status: result.status === "failed" ? "failed" : "reviewing",
+      currentActivity: result.status === "failed" ? "Execution failed" : "Reviewing execution result",
+      lastExecutionSummary: `${result.status}: ${result.summary}`,
+      updatedAt
+    } : agent)
+  };
+}
+
+function summarizeFrontendAction(action) {
+  if (action.type === "run_command") {
+    return [action.type, action.command, ...(action.args ?? [])].filter(Boolean).join(" ");
+  }
+  return [action.type, action.path].filter(Boolean).join(" ");
+}
+
+function terminalVisualAgent(agent) {
+  return agent.status === "completed" || agent.status === "failed";
+}
+
+function getShortPreview(value, maxLength) {
+  const normalized = String(value ?? "").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  return `${normalized.slice(0, maxLength).trimEnd()}...`;
 }
 
 async function loadWorkbench(sessionId) {
