@@ -12,6 +12,7 @@ import {
   deriveHealthUrl,
   getDefaultConfig,
   getSessionReplay,
+  getSessionVisualState,
   listSessionSummaries,
   runSessionFromWebRequest
 } from "../src/web/handlers.js";
@@ -137,6 +138,44 @@ test("listSessionSummaries returns completed web sessions", async () => {
 
   assert.equal(sessions.length, 1);
   assert.equal(sessions[0]?.topic, "web list");
+});
+
+test("getSessionVisualState returns projected runner and agent state", async () => {
+  const rootDir = await mkdtemp(join(tmpdir(), "web-visual-handler-sessions-"));
+  const workspaceRootDir = await mkdtemp(join(tmpdir(), "web-visual-handler-workspaces-"));
+  const result = await runSessionFromWebRequest({
+    rootDir,
+    workspaceRootDir,
+    request: {
+      topic: "visual handler",
+      maxRounds: 1,
+      enableExecution: false,
+      agents: [
+        { id: "hermes-a", name: "Hermes A", role: "planner", type: "http", url: "http://mock.local/a" },
+        { id: "hermes-b", name: "Hermes B", role: "builder", type: "http", url: "http://mock.local/b" }
+      ]
+    },
+    agentFactory: (agent) => ({
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      async respond() {
+        return { content: `${agent.name} visual response` };
+      }
+    })
+  });
+
+  const visualState = await getSessionVisualState({
+    rootDir,
+    workspaceRootDir,
+    sessionId: result.sessionId
+  });
+
+  assert.equal(visualState.sessionId, result.sessionId);
+  assert.equal(visualState.runner.status, "completed");
+  assert.equal(visualState.agents.length, 2);
+  assert.equal(visualState.agents[0]?.status, "completed");
+  assert.match(visualState.agents[0]?.lastMessagePreview ?? "", /visual response/);
 });
 
 test("getDefaultConfig reads existing config when present", async () => {
