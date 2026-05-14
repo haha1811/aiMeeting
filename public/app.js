@@ -2,7 +2,9 @@ const state = {
   defaultConfig: undefined,
   selectedSessionId: undefined,
   liveSource: undefined,
-  liveEventCount: 0
+  liveEventCount: 0,
+  timelineMessages: [],
+  expandedMessages: new Set()
 };
 
 const $ = (id) => document.getElementById(id);
@@ -15,6 +17,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     $("resetButton").addEventListener("click", applyDefaults);
     $("checkPlannerButton").addEventListener("click", () => checkEndpoint("planner"));
     $("checkBuilderButton").addEventListener("click", () => checkEndpoint("builder"));
+    $("collapseAllButton").addEventListener("click", collapseAllMessages);
+    $("expandAllButton").addEventListener("click", expandAllMessages);
+    $("latestButton").addEventListener("click", scrollTimelineToLatest);
   } catch (error) {
     setStatus(error.message, "failed");
   }
@@ -106,6 +111,7 @@ async function runSession(event) {
     };
     closeLiveSource();
     resetLiveView();
+    state.expandedMessages.clear();
     const result = await fetchJson("/api/sessions/jobs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -144,6 +150,7 @@ function renderSessionList(sessions) {
 async function loadReplay(sessionId) {
   closeLiveSource();
   state.selectedSessionId = sessionId;
+  state.expandedMessages.clear();
   const replay = await fetchJson(`/api/sessions/${encodeURIComponent(sessionId)}`);
   renderSummary(replay);
   renderTimeline(replay);
@@ -227,10 +234,16 @@ function handleLiveEvent(sessionId, event) {
 }
 
 function appendLiveMessage(message) {
+  const shouldScroll = isTimelineNearBottom();
   const container = $("timeline");
   const wrapper = document.createElement("div");
+  state.timelineMessages.push(message);
   wrapper.innerHTML = renderMessageCard(message);
   container.appendChild(wrapper.firstElementChild);
+  attachMessageToggleHandlers(container.lastElementChild);
+  if (shouldScroll) {
+    scrollTimelineToLatest();
+  }
 }
 
 function appendLiveExecutionResult(result) {
@@ -249,6 +262,8 @@ function closeLiveSource() {
 
 function resetLiveView() {
   state.liveEventCount = 0;
+  state.timelineMessages = [];
+  state.expandedMessages.clear();
   $("liveEventCount").textContent = "0";
   $("activeSpeaker").textContent = "none";
   setLiveStatus("queued");
@@ -281,26 +296,120 @@ function renderSummary(replay) {
 }
 
 function renderTimeline(replay) {
-  $("timeline").innerHTML = replay.messages.map(renderMessageCard).join("");
+  state.timelineMessages = replay.messages ?? [];
+  $("timeline").innerHTML = state.timelineMessages.map(renderMessageCard).join("");
+  attachMessageToggleHandlers();
 }
 
 function renderMessageCard(message) {
   const assignments = message.taskAssignments ?? [];
   const actions = message.executionActions ?? [];
   const results = message.executionResults ?? [];
+  const messageId = message.id ?? `${message.senderId ?? message.senderName}-${message.round}`;
+  const content = message.content || "(empty message)";
+  const preview = getMessagePreview(content);
+  const isExpandable = preview !== content;
+  const isExpanded = state.expandedMessages.has(messageId);
+  const visibleContent = isExpanded || !isExpandable ? content : preview;
+  const contentClass = isExpandable && !isExpanded ? "message-content collapsed" : "message-content";
+  const bodyId = `message-body-${escapeAttribute(messageId)}`;
+
   return `
-    <article class="message-card ${escapeHtml(message.senderRole ?? "")}">
+    <article class="message-card ${escapeHtml(message.senderRole ?? "")}" data-message-id="${escapeAttribute(messageId)}">
       <header>
-        <strong>${escapeHtml(message.senderName)}</strong>
-        <span>${escapeHtml(message.senderRole ?? "agent")}</span>
-        <small>round ${message.round}</small>
+        <div class="message-meta">
+          <strong>${escapeHtml(message.senderName)}</strong>
+          <span>${escapeHtml(message.senderRole ?? "agent")}</span>
+          <small>round ${message.round}</small>
+        </div>
+        <div class="message-card-actions">
+          ${renderCountBadge("Assignments", assignments.length)}
+          ${renderCountBadge("Actions", actions.length)}
+          ${renderCountBadge("Results", results.length)}
+          ${isExpandable ? `
+            <button
+              type="button"
+              class="secondary compact message-toggle"
+              data-message-id="${escapeAttribute(messageId)}"
+              aria-expanded="${String(isExpanded)}"
+              aria-controls="${bodyId}"
+            >${isExpanded ? "Collapse" : "Expand"}</button>
+          ` : ""}
+        </div>
       </header>
-      <p>${escapeHtml(message.content)}</p>
+      <p id="${bodyId}" class="${contentClass}">${escapeHtml(visibleContent)}</p>
+      ${isExpandable && !isExpanded ? `<p class="message-preview-note">Preview shown. Expand to read the full response.</p>` : ""}
       ${renderMiniList("Assignments", assignments.map((item) => item.title))}
       ${renderMiniList("Actions", actions.map((item) => `${item.type} ${item.path ?? item.command ?? ""}`))}
       ${renderMiniList("Results", results.map((item) => `${item.status}: ${item.summary}`))}
     </article>
   `;
+}
+
+function getMessagePreview(content) {
+  const normalized = String(content ?? "");
+  const maxLength = 520;
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  return `${normalized.slice(0, maxLength).trimEnd()}...`;
+}
+
+function renderCountBadge(label, count) {
+  if (!count) return "";
+  return `<span class="count-badge" title="${escapeAttribute(`${label}: ${count}`)}">${count} ${escapeHtml(label)}</span>`;
+}
+
+function attachMessageToggleHandlers(root = document) {
+  root.querySelectorAll(".message-toggle").forEach((button) => {
+    button.addEventListener("click", () => toggleMessageExpanded(button.dataset.messageId));
+  });
+}
+
+function toggleMessageExpanded(messageId) {
+  if (!messageId) return;
+  if (state.expandedMessages.has(messageId)) {
+    state.expandedMessages.delete(messageId);
+  } else {
+    state.expandedMessages.add(messageId);
+  }
+  rerenderCurrentTimeline();
+}
+
+function collapseAllMessages() {
+  state.expandedMessages.clear();
+  rerenderCurrentTimeline();
+}
+
+function expandAllMessages() {
+  state.timelineMessages.forEach((message) => {
+    const messageId = message.id ?? `${message.senderId ?? message.senderName}-${message.round}`;
+    state.expandedMessages.add(messageId);
+  });
+  rerenderCurrentTimeline();
+}
+
+function rerenderCurrentTimeline() {
+  const container = $("timeline");
+  const shouldScroll = isTimelineNearBottom();
+  container.innerHTML = state.timelineMessages.map(renderMessageCard).join("");
+  attachMessageToggleHandlers();
+  if (shouldScroll) {
+    scrollTimelineToLatest();
+  }
+}
+
+function isTimelineNearBottom() {
+  const container = $("timeline");
+  if (!container) return false;
+  const distance = container.scrollHeight - container.scrollTop - container.clientHeight;
+  return distance < 80;
+}
+
+function scrollTimelineToLatest() {
+  const container = $("timeline");
+  if (!container) return;
+  container.scrollTop = container.scrollHeight;
 }
 
 function renderExecution(replay) {
@@ -360,4 +469,8 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value);
 }
