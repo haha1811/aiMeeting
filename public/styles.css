@@ -138,6 +138,24 @@ button.compact {
   color: #8f1d1d;
 }
 
+.sessions-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.sessions-heading h2 {
+  margin: 0;
+}
+
+.sessions-heading span {
+  color: #697386;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .session-list {
   display: grid;
   gap: 8px;
@@ -444,5 +462,11 @@ pre {
   .timeline-toolbar,
   .message-card-actions {
     justify-content: flex-start;
+  }
+
+  .sessions-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 }

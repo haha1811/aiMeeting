@@ -139,12 +139,30 @@ function renderSessionList(sessions) {
     <button class="session-item ${session.sessionId === state.selectedSessionId ? "selected" : ""}" data-session-id="${escapeHtml(session.sessionId)}">
       <strong>${escapeHtml(session.status)}</strong>
       <span>${escapeHtml(session.topic)}</span>
-      <small>${escapeHtml(session.updatedAt)}</small>
+      <small title="UTC: ${escapeAttribute(session.updatedAt)}">${escapeHtml(formatSessionTime(session.updatedAt))}</small>
     </button>
   `).join("");
   document.querySelectorAll("[data-session-id]").forEach((button) => {
     button.addEventListener("click", () => loadReplay(button.dataset.sessionId));
   });
+}
+
+function formatSessionTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("zh-TW", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    timeZoneName: "shortOffset"
+  }).format(date);
 }
 
 async function loadReplay(sessionId) {
