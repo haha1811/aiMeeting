@@ -70,9 +70,16 @@
         </section>
         <section id="summary" class="summary-grid"></section>
         <section class="content-grid">
-          <div>
-            <h2>Meeting Timeline</h2>
-            <div id="timeline" class="timeline"></div>
+          <div class="timeline-panel">
+            <div class="section-heading">
+              <h2>Meeting Timeline</h2>
+              <div class="timeline-toolbar" aria-label="Timeline controls">
+                <button id="collapseAllButton" type="button" class="secondary compact">Collapse all</button>
+                <button id="expandAllButton" type="button" class="secondary compact">Expand all</button>
+                <button id="latestButton" type="button" class="secondary compact">Latest</button>
+              </div>
+            </div>
+            <div id="timeline" class="timeline timeline-scroll"></div>
           </div>
           <aside class="execution-panel">
             <h2>Execution</h2>
