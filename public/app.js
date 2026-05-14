@@ -4,7 +4,9 @@ const state = {
   liveSource: undefined,
   liveEventCount: 0,
   timelineMessages: [],
-  expandedMessages: new Set()
+  expandedMessages: new Set(),
+  workbench: undefined,
+  activeView: "timeline"
 };
 
 const $ = (id) => document.getElementById(id);
@@ -20,6 +22,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     $("collapseAllButton").addEventListener("click", collapseAllMessages);
     $("expandAllButton").addEventListener("click", expandAllMessages);
     $("latestButton").addEventListener("click", scrollTimelineToLatest);
+    $("timelineTab").addEventListener("click", () => setActiveView("timeline"));
+    $("workbenchTab").addEventListener("click", () => setActiveView("workbench"));
   } catch (error) {
     setStatus(error.message, "failed");
   }
@@ -174,6 +178,7 @@ async function loadReplay(sessionId) {
   renderTimeline(replay);
   renderExecution(replay);
   renderWorkspaceFiles(replay.workspaceFiles);
+  await loadWorkbench(sessionId);
   document.querySelectorAll("[data-session-id]").forEach((button) => {
     button.classList.toggle("selected", button.dataset.sessionId === sessionId);
   });
@@ -282,6 +287,7 @@ function resetLiveView() {
   state.liveEventCount = 0;
   state.timelineMessages = [];
   state.expandedMessages.clear();
+  state.workbench = undefined;
   $("liveEventCount").textContent = "0";
   $("activeSpeaker").textContent = "none";
   setLiveStatus("queued");
@@ -289,6 +295,7 @@ function resetLiveView() {
   $("execution").innerHTML = "";
   $("workspace-files").innerHTML = "";
   $("summary").innerHTML = "";
+  renderWorkbench();
 }
 
 function setLiveStatus(status) {
@@ -428,6 +435,98 @@ function scrollTimelineToLatest() {
   const container = $("timeline");
   if (!container) return;
   container.scrollTop = container.scrollHeight;
+}
+
+function createFrontendLiveWorkbenchState(sessionId, request) {
+  const now = new Date().toISOString();
+  return {
+    sessionId,
+    topic: request.topic,
+    runner: {
+      status: "queued",
+      currentActivity: "Session queued",
+      updatedAt: now
+    },
+    agents: request.agents.map((agent) => ({
+      agentId: agent.id,
+      name: agent.name,
+      role: agent.role,
+      status: "idle",
+      currentActivity: "Waiting for runner",
+      updatedAt: now
+    }))
+  };
+}
+
+function applyFrontendVisualEvent(workbench, event) {
+  return workbench;
+}
+
+async function loadWorkbench(sessionId) {
+  state.workbench = await fetchJson(`/api/sessions/${encodeURIComponent(sessionId)}/visual-state`);
+  renderWorkbench();
+}
+
+function renderWorkbench() {
+  const container = $("workbench");
+  if (!container) return;
+  if (!state.workbench) {
+    container.innerHTML = `<p class="empty">Select or run a session to see workbench state.</p>`;
+    return;
+  }
+
+  const runner = state.workbench.runner;
+  container.innerHTML = `
+    <article class="runner-visual-card status-${escapeAttribute(runner.status)}">
+      <div>
+        <span class="visual-label">Runner</span>
+        <strong>${escapeHtml(runner.status)}</strong>
+      </div>
+      <p>${escapeHtml(runner.currentActivity)}</p>
+      ${runner.updatedAt ? `<small>${escapeHtml(formatSessionTime(runner.updatedAt))}</small>` : ""}
+    </article>
+    ${state.workbench.agents.map(renderAgentVisualCard).join("")}
+  `;
+}
+
+function renderAgentVisualCard(agent) {
+  return `
+    <article class="agent-visual-card status-${escapeAttribute(agent.status)}">
+      <header>
+        <div class="agent-avatar">${escapeHtml(getInitials(agent.name))}</div>
+        <div>
+          <strong>${escapeHtml(agent.name)}</strong>
+          <span>${escapeHtml(agent.role ?? "agent")}</span>
+        </div>
+      </header>
+      <div class="visual-status-row">
+        <span class="visual-status-dot"></span>
+        <strong>${escapeHtml(agent.status)}</strong>
+      </div>
+      <p>${escapeHtml(agent.currentActivity)}</p>
+      ${agent.lastMessagePreview ? `<small>Message: ${escapeHtml(agent.lastMessagePreview)}</small>` : ""}
+      ${agent.lastActionSummary ? `<small>Action: ${escapeHtml(agent.lastActionSummary)}</small>` : ""}
+      ${agent.lastExecutionSummary ? `<small>Result: ${escapeHtml(agent.lastExecutionSummary)}</small>` : ""}
+      <time>${escapeHtml(formatSessionTime(agent.updatedAt))}</time>
+    </article>
+  `;
+}
+
+function getInitials(value) {
+  return String(value)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "H";
+}
+
+function setActiveView(view) {
+  state.activeView = view;
+  $("timelineTab").classList.toggle("selected", view === "timeline");
+  $("workbenchTab").classList.toggle("selected", view === "workbench");
+  $("timelinePanel").classList.toggle("hidden-view", view !== "timeline");
+  $("workbenchPanel").classList.toggle("hidden-view", view !== "workbench");
 }
 
 function renderExecution(replay) {

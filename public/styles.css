@@ -264,6 +264,119 @@ button.compact {
   min-height: 0;
 }
 
+.activity-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.view-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.view-tab {
+  background: #e7ebf3;
+  color: #243047;
+}
+
+.view-tab.selected {
+  background: #2454d6;
+  color: #ffffff;
+}
+
+.hidden-view {
+  display: none !important;
+}
+
+.workbench-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.workbench-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+  align-content: start;
+  max-height: calc(100vh - 330px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.runner-visual-card,
+.agent-visual-card {
+  background: #ffffff;
+  border: 1px solid #d8dee8;
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.runner-visual-card {
+  grid-column: 1 / -1;
+  border-left: 4px solid #2454d6;
+}
+
+.agent-visual-card header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.agent-visual-card header span,
+.visual-label,
+.agent-visual-card small,
+.agent-visual-card time {
+  display: block;
+  color: #697386;
+  font-size: 12px;
+}
+
+.agent-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #eef2f8;
+  color: #243047;
+  font-weight: 800;
+}
+
+.visual-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.visual-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #697386;
+}
+
+.status-thinking { border-left: 4px solid #2f6fed; }
+.status-speaking { border-left: 4px solid #179c8d; }
+.status-executing { border-left: 4px solid #c47a1f; }
+.status-reviewing { border-left: 4px solid #7c4dce; }
+.status-completed { border-left: 4px solid #1f9d55; }
+.status-failed { border-left: 4px solid #d64545; }
+
+.status-thinking .visual-status-dot,
+.status-executing .visual-status-dot {
+  animation: status-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
 .timeline-panel,
 .execution-panel {
   display: grid;
@@ -450,6 +563,11 @@ pre {
   }
 
   .timeline-scroll {
+    max-height: 65vh;
+  }
+
+  .workbench-grid {
+    grid-template-columns: 1fr;
     max-height: 65vh;
   }
 

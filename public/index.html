@@ -73,16 +73,28 @@
         </section>
         <section id="summary" class="summary-grid"></section>
         <section class="content-grid">
-          <div class="timeline-panel">
-            <div class="section-heading">
-              <h2>Meeting Timeline</h2>
-              <div class="timeline-toolbar" aria-label="Timeline controls">
-                <button id="collapseAllButton" type="button" class="secondary compact">Collapse all</button>
-                <button id="expandAllButton" type="button" class="secondary compact">Expand all</button>
-                <button id="latestButton" type="button" class="secondary compact">Latest</button>
-              </div>
+          <div class="activity-panel">
+            <div class="view-tabs" role="tablist" aria-label="Session views">
+              <button id="timelineTab" type="button" class="view-tab selected" aria-controls="timelinePanel">Timeline</button>
+              <button id="workbenchTab" type="button" class="view-tab" aria-controls="workbenchPanel">Workbench</button>
             </div>
-            <div id="timeline" class="timeline timeline-scroll"></div>
+            <div id="timelinePanel" class="timeline-panel">
+              <div class="section-heading">
+                <h2>Meeting Timeline</h2>
+                <div class="timeline-toolbar" aria-label="Timeline controls">
+                  <button id="collapseAllButton" type="button" class="secondary compact">Collapse all</button>
+                  <button id="expandAllButton" type="button" class="secondary compact">Expand all</button>
+                  <button id="latestButton" type="button" class="secondary compact">Latest</button>
+                </div>
+              </div>
+              <div id="timeline" class="timeline timeline-scroll"></div>
+            </div>
+            <div id="workbenchPanel" class="workbench-panel hidden-view">
+              <div class="section-heading">
+                <h2>Agent Visual Workbench</h2>
+              </div>
+              <div id="workbench" class="workbench-grid"></div>
+            </div>
           </div>
           <aside class="execution-panel">
             <h2>Execution</h2>
