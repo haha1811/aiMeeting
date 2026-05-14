@@ -4,7 +4,9 @@ const state = {
   liveSource: undefined,
   liveEventCount: 0,
   timelineMessages: [],
-  expandedMessages: new Set()
+  expandedMessages: new Set(),
+  workbench: undefined,
+  activeView: "timeline"
 };
 
 const $ = (id) => document.getElementById(id);
@@ -20,6 +22,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     $("collapseAllButton").addEventListener("click", collapseAllMessages);
     $("expandAllButton").addEventListener("click", expandAllMessages);
     $("latestButton").addEventListener("click", scrollTimelineToLatest);
+    $("timelineTab").addEventListener("click", () => setActiveView("timeline"));
+    $("workbenchTab").addEventListener("click", () => setActiveView("workbench"));
   } catch (error) {
     setStatus(error.message, "failed");
   }
@@ -118,6 +122,8 @@ async function runSession(event) {
       body: JSON.stringify(request)
     });
     state.selectedSessionId = result.sessionId;
+    state.workbench = createFrontendLiveWorkbenchState(result.sessionId, request);
+    renderWorkbench();
     setLiveStatus(result.status);
     setStatus(`Running session ${result.sessionId}`, "running");
     await loadSessions();
@@ -174,6 +180,7 @@ async function loadReplay(sessionId) {
   renderTimeline(replay);
   renderExecution(replay);
   renderWorkspaceFiles(replay.workspaceFiles);
+  await loadWorkbench(sessionId);
   document.querySelectorAll("[data-session-id]").forEach((button) => {
     button.classList.toggle("selected", button.dataset.sessionId === sessionId);
   });
@@ -212,6 +219,11 @@ function connectLiveEvents(sessionId, eventsUrl) {
 function handleLiveEvent(sessionId, event) {
   if (sessionId !== state.selectedSessionId) {
     return;
+  }
+
+  if (state.workbench) {
+    state.workbench = applyFrontendVisualEvent(state.workbench, event);
+    renderWorkbench();
   }
 
   if (event.type === "session.started") {
@@ -282,6 +294,7 @@ function resetLiveView() {
   state.liveEventCount = 0;
   state.timelineMessages = [];
   state.expandedMessages.clear();
+  state.workbench = undefined;
   $("liveEventCount").textContent = "0";
   $("activeSpeaker").textContent = "none";
   setLiveStatus("queued");
@@ -289,6 +302,7 @@ function resetLiveView() {
   $("execution").innerHTML = "";
   $("workspace-files").innerHTML = "";
   $("summary").innerHTML = "";
+  renderWorkbench();
 }
 
 function setLiveStatus(status) {
@@ -365,12 +379,7 @@ function renderMessageCard(message) {
 }
 
 function getMessagePreview(content) {
-  const normalized = String(content ?? "");
-  const maxLength = 520;
-  if (normalized.length <= maxLength) {
-    return normalized;
-  }
-  return `${normalized.slice(0, maxLength).trimEnd()}...`;
+  return getShortPreview(content, 520);
 }
 
 function renderCountBadge(label, count) {
@@ -428,6 +437,247 @@ function scrollTimelineToLatest() {
   const container = $("timeline");
   if (!container) return;
   container.scrollTop = container.scrollHeight;
+}
+
+function createFrontendLiveWorkbenchState(sessionId, request) {
+  const now = new Date().toISOString();
+  return {
+    sessionId,
+    topic: request.topic,
+    runner: {
+      status: "queued",
+      currentActivity: "Session queued",
+      updatedAt: now
+    },
+    agents: request.agents.map((agent) => ({
+      agentId: agent.id,
+      name: agent.name,
+      role: agent.role,
+      status: "idle",
+      currentActivity: "Waiting for runner",
+      updatedAt: now
+    }))
+  };
+}
+
+function applyFrontendVisualEvent(workbench, event) {
+  switch (event.type) {
+    case "session.queued":
+      return {
+        ...workbench,
+        runner: { status: "queued", currentActivity: "Session queued", updatedAt: event.createdAt }
+      };
+    case "session.started":
+      return {
+        ...workbench,
+        runner: { status: "running", currentActivity: "Coordinating session", updatedAt: event.createdAt },
+        agents: workbench.agents.map((agent) => terminalVisualAgent(agent) ? agent : {
+          ...agent,
+          status: "idle",
+          currentActivity: "Waiting for turn",
+          updatedAt: event.createdAt
+        })
+      };
+    case "speaker.active":
+      return {
+        ...workbench,
+        runner: {
+          status: "running",
+          currentActivity: `${event.data.agentName ?? event.data.agentId} is active`,
+          updatedAt: event.createdAt
+        },
+        agents: workbench.agents.map((agent) => {
+          if (agent.agentId === event.data.agentId) {
+            return {
+              ...agent,
+              name: event.data.agentName ?? agent.name,
+              role: event.data.role ?? agent.role,
+              status: "thinking",
+              currentActivity: `Round ${event.data.round}: preparing response`,
+              updatedAt: event.createdAt
+            };
+          }
+          return terminalVisualAgent(agent) ? agent : {
+            ...agent,
+            status: "idle",
+            currentActivity: "Waiting for turn",
+            updatedAt: event.createdAt
+          };
+        })
+      };
+    case "message.appended":
+      return applyFrontendMessage(workbench, event.data.message, event.createdAt);
+    case "action.created":
+      return applyFrontendAction(workbench, event.data.action, event.createdAt);
+    case "execution.result":
+      return applyFrontendExecutionResult(workbench, event.data.result, event.createdAt);
+    case "session.completed":
+      return {
+        ...workbench,
+        runner: { status: "completed", currentActivity: "Session completed", updatedAt: event.createdAt },
+        agents: workbench.agents.map((agent) => agent.status === "failed" ? agent : {
+          ...agent,
+          status: "completed",
+          currentActivity: "Session completed",
+          updatedAt: event.createdAt
+        })
+      };
+    case "session.failed":
+      return {
+        ...workbench,
+        runner: { status: "failed", currentActivity: event.data.error ?? "Session failed", updatedAt: event.createdAt },
+        agents: workbench.agents.map((agent) => agent.status === "completed" ? agent : {
+          ...agent,
+          status: "failed",
+          currentActivity: event.data.error ?? "Session failed",
+          updatedAt: event.createdAt
+        })
+      };
+    default:
+      return workbench;
+  }
+}
+
+function applyFrontendMessage(workbench, message, updatedAt) {
+  return {
+    ...workbench,
+    runner: {
+      status: workbench.runner.status === "queued" ? "running" : workbench.runner.status,
+      currentActivity: `${message.senderName} responded`,
+      updatedAt
+    },
+    agents: workbench.agents.map((agent) => agent.agentId === message.senderId ? {
+      ...agent,
+      name: message.senderName,
+      role: message.senderRole ?? agent.role,
+      status: "speaking",
+      currentActivity: `Round ${message.round}: shared response`,
+      lastMessagePreview: getShortPreview(message.content, 180),
+      updatedAt
+    } : agent)
+  };
+}
+
+function applyFrontendAction(workbench, action, updatedAt) {
+  return {
+    ...workbench,
+    runner: {
+      status: workbench.runner.status === "queued" ? "running" : workbench.runner.status,
+      currentActivity: `${action.agentId} created action`,
+      updatedAt
+    },
+    agents: workbench.agents.map((agent) => agent.agentId === action.agentId ? {
+      ...agent,
+      status: "executing",
+      currentActivity: "Executing workspace action",
+      lastActionSummary: summarizeFrontendAction(action),
+      updatedAt
+    } : agent)
+  };
+}
+
+function applyFrontendExecutionResult(workbench, result, updatedAt) {
+  return {
+    ...workbench,
+    runner: {
+      status: workbench.runner.status === "queued" ? "running" : workbench.runner.status,
+      currentActivity: `${result.agentId} execution ${result.status}`,
+      updatedAt
+    },
+    agents: workbench.agents.map((agent) => agent.agentId === result.agentId ? {
+      ...agent,
+      status: result.status === "failed" ? "failed" : "reviewing",
+      currentActivity: result.status === "failed" ? "Execution failed" : "Reviewing execution result",
+      lastExecutionSummary: `${result.status}: ${result.summary}`,
+      updatedAt
+    } : agent)
+  };
+}
+
+function summarizeFrontendAction(action) {
+  if (action.type === "run_command") {
+    return [action.type, action.command, ...(action.args ?? [])].filter(Boolean).join(" ");
+  }
+  return [action.type, action.path].filter(Boolean).join(" ");
+}
+
+function terminalVisualAgent(agent) {
+  return agent.status === "completed" || agent.status === "failed";
+}
+
+function getShortPreview(value, maxLength) {
+  const normalized = String(value ?? "").trim();
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+  return `${normalized.slice(0, maxLength).trimEnd()}...`;
+}
+
+async function loadWorkbench(sessionId) {
+  state.workbench = await fetchJson(`/api/sessions/${encodeURIComponent(sessionId)}/visual-state`);
+  renderWorkbench();
+}
+
+function renderWorkbench() {
+  const container = $("workbench");
+  if (!container) return;
+  if (!state.workbench) {
+    container.innerHTML = `<p class="empty">Select or run a session to see workbench state.</p>`;
+    return;
+  }
+
+  const runner = state.workbench.runner;
+  container.innerHTML = `
+    <article class="runner-visual-card status-${escapeAttribute(runner.status)}">
+      <div>
+        <span class="visual-label">Runner</span>
+        <strong>${escapeHtml(runner.status)}</strong>
+      </div>
+      <p>${escapeHtml(runner.currentActivity)}</p>
+      ${runner.updatedAt ? `<small>${escapeHtml(formatSessionTime(runner.updatedAt))}</small>` : ""}
+    </article>
+    ${state.workbench.agents.map(renderAgentVisualCard).join("")}
+  `;
+}
+
+function renderAgentVisualCard(agent) {
+  return `
+    <article class="agent-visual-card status-${escapeAttribute(agent.status)}">
+      <header>
+        <div class="agent-avatar">${escapeHtml(getInitials(agent.name))}</div>
+        <div>
+          <strong>${escapeHtml(agent.name)}</strong>
+          <span>${escapeHtml(agent.role ?? "agent")}</span>
+        </div>
+      </header>
+      <div class="visual-status-row">
+        <span class="visual-status-dot"></span>
+        <strong>${escapeHtml(agent.status)}</strong>
+      </div>
+      <p>${escapeHtml(agent.currentActivity)}</p>
+      ${agent.lastMessagePreview ? `<small>Message: ${escapeHtml(agent.lastMessagePreview)}</small>` : ""}
+      ${agent.lastActionSummary ? `<small>Action: ${escapeHtml(agent.lastActionSummary)}</small>` : ""}
+      ${agent.lastExecutionSummary ? `<small>Result: ${escapeHtml(agent.lastExecutionSummary)}</small>` : ""}
+      <time>${escapeHtml(formatSessionTime(agent.updatedAt))}</time>
+    </article>
+  `;
+}
+
+function getInitials(value) {
+  return String(value)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "H";
+}
+
+function setActiveView(view) {
+  state.activeView = view;
+  $("timelineTab").classList.toggle("selected", view === "timeline");
+  $("workbenchTab").classList.toggle("selected", view === "workbench");
+  $("timelinePanel").classList.toggle("hidden-view", view !== "timeline");
+  $("workbenchPanel").classList.toggle("hidden-view", view !== "workbench");
 }
 
 function renderExecution(replay) {

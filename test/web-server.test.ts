@@ -234,3 +234,49 @@ test("web server sends current job status to late event subscribers", async () =
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 });
+
+test("web server serves visual state for a replay session", async () => {
+  const rootDir = await mkdtemp(join(tmpdir(), "web-visual-server-sessions-"));
+  const workspaceRootDir = await mkdtemp(join(tmpdir(), "web-visual-server-workspaces-"));
+  const server = createWebServer({
+    rootDir,
+    workspaceRootDir,
+    publicDir: "public",
+    agentFactory: (agent) => ({
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      async respond() {
+        return { content: `${agent.id} visual` };
+      }
+    })
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 0;
+
+  try {
+    const jobResponse = await fetch(`http://127.0.0.1:${port}/api/sessions/run`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        topic: "server visual",
+        maxRounds: 1,
+        enableExecution: false,
+        agents: [
+          { id: "hermes-a", name: "Hermes A", role: "planner", type: "http", url: "http://mock.local/a" },
+          { id: "hermes-b", name: "Hermes B", role: "builder", type: "http", url: "http://mock.local/b" }
+        ]
+      })
+    });
+    const job = await jobResponse.json() as { sessionId: string };
+    const visualResponse = await fetch(`http://127.0.0.1:${port}/api/sessions/${job.sessionId}/visual-state`);
+    const body = await visualResponse.json() as { runner: { status: string }; agents: unknown[] };
+
+    assert.equal(visualResponse.status, 200);
+    assert.equal(body.runner.status, "completed");
+    assert.equal(body.agents.length, 2);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});

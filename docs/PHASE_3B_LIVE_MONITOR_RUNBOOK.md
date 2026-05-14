@@ -45,6 +45,16 @@ Builder URL: green ✓
 8. Confirm Execution receives results if actions are produced.
 9. Confirm final status becomes `completed`.
 
+## Agent Visual Workbench Check
+
+After selecting or running a session:
+
+1. Click `Workbench`.
+2. Confirm the Runner card has a non-empty status.
+3. Confirm Planner and Builder cards are visible.
+4. During a live run, confirm the active agent moves through visible states such as `thinking`, `speaking`, `executing`, or `completed`.
+5. Click `Timeline` and confirm the original message timeline still renders.
+
 ## Fallback Verification
 
 If live updates stop, check persisted replay:

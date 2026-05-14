@@ -5,6 +5,7 @@ import { DiscussionService } from "../service.js";
 import type { DiscussionResult, HermesAgent, HttpHermesAgentConfig } from "../index.js";
 import { listSessions, readSessionReplay } from "./session-reader.js";
 import { validateAgentHealthCheckRequest, validateRunSessionRequest } from "./validation.js";
+import { projectReplayVisualState } from "./visual-state.js";
 import type { LiveSessionJobRegistry } from "./live-session-jobs.js";
 import type { WebCreateSessionJobResponse } from "./live-types.js";
 import type {
@@ -13,7 +14,8 @@ import type {
   WebRunSessionRequest,
   WebRunSessionResponse,
   WebSessionListItem,
-  WebSessionReplay
+  WebSessionReplay,
+  VisualWorkbenchState
 } from "./types.js";
 
 export interface WebHandlerOptions {
@@ -118,6 +120,13 @@ export async function listSessionSummaries(rootDir: string): Promise<WebSessionL
 
 export async function getSessionReplay(options: WebHandlerOptions & { sessionId: string }): Promise<WebSessionReplay> {
   return readSessionReplay(options);
+}
+
+export async function getSessionVisualState(
+  options: WebHandlerOptions & { sessionId: string }
+): Promise<VisualWorkbenchState> {
+  const replay = await readSessionReplay(options);
+  return projectReplayVisualState(replay);
 }
 
 export async function checkAgentHealth(request: unknown): Promise<WebAgentHealthCheckResponse> {

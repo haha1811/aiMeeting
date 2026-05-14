@@ -34,3 +34,21 @@ test("frontend displays session timestamps in Taiwan time", async () => {
   assert.match(app, /formatSessionTime\(session\.updatedAt\)/);
   assert.match(html, /Asia\/Taipei \(UTC\+08:00\)/);
 });
+
+test("frontend exposes agent visual workbench UI and helpers", async () => {
+  const app = await readFile("public/app.js", "utf8");
+  const html = await readFile("public/index.html", "utf8");
+  const css = await readFile("public/styles.css", "utf8");
+
+  assert.match(html, /workbenchTab/);
+  assert.match(html, /workbenchPanel/);
+  assert.match(html, /Agent Visual Workbench/);
+  assert.match(app, /function renderWorkbench/);
+  assert.match(app, /function loadWorkbench/);
+  assert.match(app, /function createFrontendLiveWorkbenchState/);
+  assert.match(app, /function applyFrontendVisualEvent/);
+  assert.match(app, /\/api\/sessions\/\$\{encodeURIComponent\(sessionId\)\}\/visual-state/);
+  assert.match(css, /workbench-grid/);
+  assert.match(css, /agent-visual-card/);
+  assert.match(css, /status-executing/);
+});

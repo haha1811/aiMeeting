@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.4.0 - Agent Visual Workbench
+
+Released: 2026-05-14
+
+### Added
+
+- Added a deterministic visual-state projector for runner, planner, and builder status.
+- Added `GET /api/sessions/:sessionId/visual-state` for replay Workbench state.
+- Added a Web Runner Console `Workbench` view with Runner and agent visual cards.
+- Added live Workbench updates driven by existing SSE session events.
+- Added tests for domain projection, web API behavior, frontend static contracts, and server routing.
+
+### Changed
+
+- Kept Timeline and Execution behavior intact while adding Workbench as a separate view.
+- Preserved UTC persistence and existing session JSONL formats.
+
 ## v0.3.4 - Taiwan Session Time Display
 
 Released: 2026-05-14

@@ -10,6 +10,7 @@ import {
   createLiveSessionJob,
   getDefaultConfig,
   getSessionReplay,
+  getSessionVisualState,
   listSessionSummaries,
   runSessionFromWebRequest
 } from "./handlers.js";
@@ -70,6 +71,16 @@ export function createWebServer(options: WebServerOptions): http.Server {
         await sendJson(res, 200, await createLiveSessionJob({
           registry: liveJobs,
           request: body
+        }));
+        return;
+      }
+
+      const visualStateMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/visual-state$/);
+      if (req.method === "GET" && visualStateMatch?.[1]) {
+        await sendJson(res, 200, await getSessionVisualState({
+          rootDir: options.rootDir,
+          workspaceRootDir: options.workspaceRootDir,
+          sessionId: visualStateMatch[1]
         }));
         return;
       }
