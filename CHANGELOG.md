@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.3.3 - Timeline Usability
+
+Released: 2026-05-14
+
+### Added
+
+- Added timeline toolbar controls to collapse all messages, expand all messages, and jump to the latest message.
+- Added collapsed message previews with per-message expand and collapse controls.
+- Added a frontend static regression test for live APIs and timeline usability helpers.
+
+### Changed
+
+- Constrained the Meeting Timeline into its own scroll area so long Planner / Builder responses do not force full-page scrolling.
+- Preserved live SSE updates, replay loading, and chronological message order while keeping collapse state client-side.
+
 ## v0.3.2 - Runner Workspace Prompt Hardening
 
 Released: 2026-05-13
